@@ -1,8 +1,3 @@
-/**
- * Admin Dashboard
- * Shows live DB stats + recent user list from /api/admin/dashboard
- */
-
 import { useState, useEffect } from 'react'
 import api from '../utils/api'
 
@@ -18,41 +13,59 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="page-container" style={{ textAlign: 'center', paddingTop: '4rem' }}>Loading…</div>
-  if (error)   return <div className="page-container"><div className="alert alert-error">{error}</div></div>
+  if (loading) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:48, height:48, border:'4px solid #DAFFFB', borderTopColor:'#64CCC5',
+          borderRadius:'50%', animation:'spin .7s linear infinite', margin:'0 auto 1rem' }} />
+        <p style={{ color:'#176B87' }}>Loading dashboard…</p>
+      </div>
+    </div>
+  )
+  if (error) return <div className="page-container"><div className="alert alert-error">{error}</div></div>
 
   const { stats, recent_users } = data
 
+  const statCards = [
+    { value: stats.total_users, label: '👥 Total Users',  border: '#04364A', valueColor: '#04364A' },
+    { value: stats.patients,    label: '🧑‍🦱 Patients',     border: '#64CCC5', valueColor: '#176B87' },
+    { value: stats.doctors,     label: '👨‍⚕️ Doctors',      border: '#176B87', valueColor: '#176B87' },
+    { value: stats.admins,      label: '🛡️ Admins',       border: '#4ab5ae', valueColor: '#4ab5ae' },
+  ]
+
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700 }}>🛡️ Admin Control Panel</h1>
-        <p style={{ color: 'var(--gray-600)', marginTop: '.25rem' }}>System-wide overview and management.</p>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #04364A 0%, #176B87 100%)',
+        borderRadius: 16, padding: '1.75rem 2rem', marginBottom: '2rem',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        boxShadow: '0 8px 24px rgba(4,54,74,.25)'
+      }}>
+        <div>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#64CCC5' }}>
+            🛡️ Admin Control Panel
+          </h1>
+          <p style={{ color: '#DAFFFB', marginTop: '.25rem', opacity: .85 }}>
+            System-wide overview and user management
+          </p>
+        </div>
+        <div style={{ fontSize: '3.5rem', opacity: .6 }}>⚙️</div>
       </div>
 
       {/* Stats */}
       <div className="stats-grid">
-        <div className="stat-card" style={{ borderColor: '#111827' }}>
-          <div className="stat-value">{stats.total_users}</div>
-          <div className="stat-label">👥 Total Users</div>
-        </div>
-        <div className="stat-card" style={{ borderColor: '#2563eb' }}>
-          <div className="stat-value">{stats.patients}</div>
-          <div className="stat-label">🧑‍🦱 Patients</div>
-        </div>
-        <div className="stat-card" style={{ borderColor: '#059669' }}>
-          <div className="stat-value">{stats.doctors}</div>
-          <div className="stat-label">👨‍⚕️ Doctors</div>
-        </div>
-        <div className="stat-card" style={{ borderColor: '#7c3aed' }}>
-          <div className="stat-value">{stats.admins}</div>
-          <div className="stat-label">🛡️ Admins</div>
-        </div>
+        {statCards.map((s, i) => (
+          <div key={i} className="stat-card" style={{ borderTopColor: s.border }}>
+            <div className="stat-value" style={{ color: s.valueColor }}>{s.value}</div>
+            <div className="stat-label">{s.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Recent users */}
+      {/* Recent Users Table */}
       <div className="card">
-        <div className="section-title">Recently Registered Users</div>
+        <div className="section-title">🕐 Recently Registered Users</div>
         <div className="table-wrapper">
           <table>
             <thead>
@@ -61,11 +74,11 @@ export default function AdminDashboard() {
             <tbody>
               {recent_users.map(u => (
                 <tr key={u.id}>
-                  <td>{u.id}</td>
-                  <td>{u.name}</td>
-                  <td style={{ color: 'var(--gray-600)' }}>{u.email}</td>
+                  <td style={{ fontWeight: 600, color: '#176B87' }}>{u.id}</td>
+                  <td style={{ fontWeight: 500 }}>{u.name}</td>
+                  <td style={{ color: '#4a8fa0' }}>{u.email}</td>
                   <td><span className={`badge badge-${u.role}`}>{u.role}</span></td>
-                  <td style={{ color: 'var(--gray-400)', fontSize: '.8rem' }}>
+                  <td style={{ color: '#7bbec0', fontSize: '.8rem' }}>
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
                 </tr>
