@@ -11,9 +11,9 @@ import RoleBasedRedirect   from './components/RoleBasedRedirect'
 
 import LoginPage           from './pages/LoginPage'
 import SignupPage          from './pages/SignupPage'
-import PatientDashboard    from './pages/PatientDashboard'
-import DoctorDashboard     from './pages/DoctorDashboard'
-import AdminDashboard      from './pages/AdminDashboard'
+import PatientDashboard    from './dashboards/PatientDashboard'
+import DoctorDashboard     from './dashboards/DoctorDashboard'
+import AdminDashboard      from './dashboards/AdminDashboard'
 import UnauthorizedPage    from './pages/UnauthorizedPage'
 
 import './App.css';

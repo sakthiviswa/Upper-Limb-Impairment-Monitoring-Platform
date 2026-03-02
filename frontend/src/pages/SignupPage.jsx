@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import AuthLayout from '../components/AuthLayout'
+import AuthInput, { EmailIcon, LockIcon, UserIcon } from '../components/AuthInput'
 
 const ROLE_PATHS = { patient: '/patient/dashboard', doctor: '/doctor/dashboard', admin: '/admin/dashboard' }
 
 const ROLES = [
-  { value: 'patient', label: 'Patient',  icon: '🧑‍🦱', desc: 'Book appointments & records' },
-  { value: 'doctor',  label: 'Doctor',   icon: '👨‍⚕️', desc: 'Manage patients & schedule' },
+  { value: 'patient', label: 'Patient',  icon: '🧑‍🦱', desc: 'Track recovery & appointments' },
+  { value: 'doctor',  label: 'Doctor',   icon: '👨‍⚕️', desc: 'Monitor patients & schedules' },
   { value: 'admin',   label: 'Admin',    icon: '🛡️',  desc: 'Full system access' },
 ]
 
 export default function SignupPage() {
   const { register } = useAuth()
-  const navigate = useNavigate()
+  const navigate     = useNavigate()
 
   const [form, setForm]       = useState({ name: '', email: '', password: '', confirm: '', role: '' })
   const [errors, setErrors]   = useState({})
@@ -43,104 +45,131 @@ export default function SignupPage() {
       navigate(ROLE_PATHS[user.role] ?? '/', { replace: true })
     } catch (err) {
       setApiErr(err.response?.data?.message ?? 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card" style={{ maxWidth: 500 }}>
+    <AuthLayout
+      title="Create your account"
+      subtitle="Join RehabMonitor and take control of your rehabilitation journey."
+    >
+      {apiError && (
+        <div style={S.apiBanner}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
+            <circle cx="12" cy="12" r="10" stroke="#DC2626" strokeWidth="2"/>
+            <path d="M12 8v4M12 16h.01" stroke="#DC2626" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          {apiError}
+        </div>
+      )}
 
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', margin: '0 auto .75rem',
-            background: 'linear-gradient(135deg, #64CCC5, #176B87)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '2rem', boxShadow: '0 8px 24px rgba(100,204,197,.4)'
-          }}>✨</div>
-          <h1 style={{ fontSize: '1.7rem', fontWeight: 700, color: '#fff' }}>Create your account</h1>
-          <p style={{ color: 'rgba(218,255,251,.8)', marginTop: '.25rem', fontSize: '.9rem' }}>
-            Join the HealthCare Portal today
-          </p>
+      <form onSubmit={handleSubmit} noValidate>
+        <AuthInput label="Full Name" name="name" type="text"
+          placeholder="Jane Doe" value={form.name} onChange={handleChange}
+          error={errors.name} autoComplete="name" icon={<UserIcon />} required />
+
+        <AuthInput label="Email address" name="email" type="email"
+          placeholder="you@example.com" value={form.email} onChange={handleChange}
+          error={errors.email} autoComplete="email" icon={<EmailIcon />} required />
+
+        <div style={S.pwdRow}>
+          <div style={{flex:1}}>
+            <AuthInput label="Password" name="password" type="password"
+              placeholder="Min. 6 chars" value={form.password} onChange={handleChange}
+              error={errors.password} autoComplete="new-password" icon={<LockIcon />} required />
+          </div>
+          <div style={{flex:1}}>
+            <AuthInput label="Confirm" name="confirm" type="password"
+              placeholder="Repeat password" value={form.confirm} onChange={handleChange}
+              error={errors.confirm} autoComplete="new-password" icon={<LockIcon />} required />
+          </div>
         </div>
 
-        <div className="card">
-          {apiError && <div className="alert alert-error">{apiError}</div>}
-
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <input className={`form-input ${errors.name ? 'error' : ''}`} type="text" name="name"
-                placeholder="Jane Doe" value={form.name} onChange={handleChange} autoComplete="name" />
-              {errors.name && <p className="error-text">{errors.name}</p>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email address</label>
-              <input className={`form-input ${errors.email ? 'error' : ''}`} type="email" name="email"
-                placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
-              {errors.email && <p className="error-text">{errors.email}</p>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input className={`form-input ${errors.password ? 'error' : ''}`} type="password" name="password"
-                placeholder="Min. 6 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
-              {errors.password && <p className="error-text">{errors.password}</p>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Confirm Password</label>
-              <input className={`form-input ${errors.confirm ? 'error' : ''}`} type="password" name="confirm"
-                placeholder="Repeat password" value={form.confirm} onChange={handleChange} autoComplete="new-password" />
-              {errors.confirm && <p className="error-text">{errors.confirm}</p>}
-            </div>
-
-            {/* Role Selector */}
-            <div className="form-group">
-              <label className="form-label">Select your role</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.75rem' }}>
-                {ROLES.map(r => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, role: r.value }))}
-                    style={{
-                      padding: '.875rem .5rem',
-                      borderRadius: 10,
-                      border: `2px solid ${form.role === r.value ? '#64CCC5' : '#b2ebea'}`,
-                      background: form.role === r.value
-                        ? 'linear-gradient(135deg, rgba(100,204,197,.2), rgba(23,107,135,.15))'
-                        : '#fff',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all .2s',
-                    }}
-                  >
-                    <div style={{ fontSize: '1.5rem' }}>{r.icon}</div>
-                    <div style={{ fontWeight: 600, fontSize: '.85rem', marginTop: '.25rem',
-                      color: form.role === r.value ? '#04364A' : '#176B87' }}>{r.label}</div>
-                    <div style={{ fontSize: '.7rem', color: '#4a8fa0', marginTop: '.2rem', lineHeight: 1.3 }}>{r.desc}</div>
-                  </button>
-                ))}
-              </div>
-              {errors.role && <p className="error-text">{errors.role}</p>}
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ marginTop: '.5rem' }}>
-              {loading ? <><div className="spinner" /> Creating account…</> : 'Create Account →'}
-            </button>
-          </form>
-
-          <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '.875rem', color: '#4a8fa0' }}>
-            Already have an account?{' '}
-            <Link to="/login" style={{ color: '#176B87', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
-          </p>
+        <div style={S.roleSection}>
+          <div style={S.roleLabel}>Select your role <span style={{color:'#EF4444'}}>*</span></div>
+          <div style={S.roleGrid}>
+            {ROLES.map(r => {
+              const active = form.role === r.value
+              return (
+                <button key={r.value} type="button"
+                  onClick={() => setForm(f => ({ ...f, role: r.value }))}
+                  style={{...S.roleCard, ...(active ? S.roleCardActive : {})}}>
+                  <span style={S.roleEmoji}>{r.icon}</span>
+                  <div style={{...S.roleName, color: active ? '#1D4ED8' : '#1E293B'}}>{r.label}</div>
+                  <div style={S.roleDesc}>{r.desc}</div>
+                  {active && (
+                    <div style={S.roleCheck}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {errors.role && (
+            <p style={S.roleErr}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{flexShrink:0}}>
+                <circle cx="12" cy="12" r="10" stroke="#EF4444" strokeWidth="2"/>
+                <path d="M12 8v4M12 16h.01" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              {errors.role}
+            </p>
+          )}
         </div>
-      </div>
-    </div>
+
+        <p style={S.terms}>
+          By creating an account you agree to our{' '}
+          <button type="button" style={S.termsLink}>Terms of Service</button>
+          {' '}and{' '}
+          <button type="button" style={S.termsLink}>Privacy Policy</button>.
+        </p>
+
+        <button type="submit" disabled={loading}
+          style={{...S.submitBtn, ...(loading ? S.submitDisabled : {})}}
+          onMouseEnter={e => { if(!loading) e.currentTarget.style.background='#1D4ED8' }}
+          onMouseLeave={e => { if(!loading) e.currentTarget.style.background='#2563EB' }}>
+          {loading
+            ? <span style={S.row2}><span style={S.spinner}/>Creating account…</span>
+            : <span style={S.row2}>Create Account
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </span>
+          }
+        </button>
+      </form>
+
+      <p style={S.switchText}>
+        Already have an account?{' '}
+        <Link to="/login" style={S.switchLink}>Sign in instead</Link>
+      </p>
+    </AuthLayout>
   )
+}
+
+const S = {
+  apiBanner: {display:'flex',alignItems:'flex-start',gap:'.625rem',background:'#FEF2F2',border:'1px solid #FECACA',borderRadius:10,padding:'.75rem 1rem',fontSize:'.8125rem',color:'#DC2626',fontWeight:500,marginBottom:'1.25rem',lineHeight:1.5},
+  pwdRow: {display:'grid',gridTemplateColumns:'1fr 1fr',gap:'.875rem'},
+  roleSection: {marginBottom:'1.125rem'},
+  roleLabel: {fontSize:'.8125rem',fontWeight:600,color:'#374151',marginBottom:'.5rem',letterSpacing:'.01em'},
+  roleGrid: {display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'.6rem'},
+  roleCard: {position:'relative',padding:'.875rem .5rem',borderRadius:10,border:'1.5px solid #E2E8F0',background:'#F8FAFC',cursor:'pointer',textAlign:'center',transition:'all .18s',fontFamily:'inherit'},
+  roleCardActive: {border:'1.5px solid #2563EB',background:'#EFF6FF',boxShadow:'0 0 0 3px rgba(37,99,235,.1)'},
+  roleEmoji: {fontSize:'1.4rem',display:'block',marginBottom:'.3rem'},
+  roleName: {fontSize:'.8rem',fontWeight:700,marginBottom:'.2rem'},
+  roleDesc: {fontSize:'.65rem',color:'#94A3B8',lineHeight:1.35},
+  roleCheck: {position:'absolute',top:6,right:6,width:18,height:18,borderRadius:'50%',background:'#2563EB',display:'flex',alignItems:'center',justifyContent:'center'},
+  roleErr: {display:'flex',alignItems:'center',gap:'.3rem',marginTop:'.4rem',fontSize:'.775rem',color:'#EF4444',fontWeight:500},
+  terms: {fontSize:'.75rem',color:'#94A3B8',textAlign:'center',marginBottom:'1rem',lineHeight:1.55},
+  termsLink: {background:'none',border:'none',cursor:'pointer',color:'#2563EB',fontWeight:600,fontSize:'.75rem',padding:0,fontFamily:'inherit'},
+  submitBtn: {width:'100%',height:48,background:'#2563EB',color:'#fff',border:'none',borderRadius:10,fontSize:'1rem',fontWeight:600,cursor:'pointer',fontFamily:'inherit',transition:'background .18s, box-shadow .18s',boxShadow:'0 4px 14px rgba(37,99,235,.35)'},
+  submitDisabled: {background:'#93C5FD',cursor:'not-allowed',boxShadow:'none'},
+  row2: {display:'flex',alignItems:'center',justifyContent:'center',gap:'.5rem'},
+  spinner: {display:'inline-block',width:17,height:17,border:'2.5px solid rgba(255,255,255,.35)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .7s linear infinite'},
+  switchText: {textAlign:'center',fontSize:'.8125rem',color:'#64748B',marginTop:'1.25rem'},
+  switchLink: {color:'#2563EB',fontWeight:600,textDecoration:'none'},
 }
