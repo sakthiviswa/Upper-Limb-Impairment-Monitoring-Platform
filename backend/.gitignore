@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Flask/FastAPI
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project outputs
+outputs/
+reports/
+graphs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*~

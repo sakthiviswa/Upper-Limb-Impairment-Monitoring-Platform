@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Node/Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# IDE/Editor
+.vscode/
+.idea/
+*.code-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project outputs
+backend/outputs/
+backend/instance/
+outputs/
+reports/
+graphs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Models and large files
+*.pth
+*.pt
+*.h5
+*.pkl
+*.pickle
+
+# Cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
