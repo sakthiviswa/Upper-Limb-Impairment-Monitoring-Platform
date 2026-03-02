@@ -1,3 +1,8 @@
+# Create a virtual environment before installing dependencies:
+#   python -m venv venv
+#   .\venv\Scripts\Activate.ps1  (on Windows)
+#   source venv/bin/activate     (on macOS/Linux)
+
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 Flask-JWT-Extended==4.6.0

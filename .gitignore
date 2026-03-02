@@ -69,3 +69,5 @@ graphs/
 .pytest_cache/
 .coverage
 htmlcov/
+*.db
+rehab_monitor.db

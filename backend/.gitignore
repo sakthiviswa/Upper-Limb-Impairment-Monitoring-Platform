@@ -12,7 +12,10 @@ ENV/
 .env.local
 *.egg-info/
 dist/
+rehab_monitor.db
 build/
+
+*.db
 
 # Flask/FastAPI
 instance/
