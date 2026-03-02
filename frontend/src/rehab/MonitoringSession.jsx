@@ -1,7 +1,7 @@
 /**
  * MonitoringSession.jsx
+ * Enhanced with improved camera feed grid + maximize/minimize button.
  * All styling via inline CSS — zero Tailwind, zero CSS files needed.
- * All original functionality preserved.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -73,12 +73,74 @@ function Spinner({ size = 18, color = '#2563eb' }) {
   )
 }
 
+/* ─────────────── Icon helpers ─────────────── */
+function IconMaximize({ size = 14, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  )
+}
+function IconMinimize({ size = 14, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" />
+      <line x1="10" y1="14" x2="3" y2="21" /><line x1="21" y1="3" x2="14" y2="10" />
+    </svg>
+  )
+}
+
+/* ─────────────── Camera Feed Grid Indicator ─────────────── */
+function CameraGridOverlay({ visible }) {
+  if (!visible) return null
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+      {/* Rule-of-thirds vertical lines */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '33.33%', width: 1, background: 'rgba(255,255,255,0.12)' }} />
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: '66.66%', width: 1, background: 'rgba(255,255,255,0.12)' }} />
+      {/* Rule-of-thirds horizontal lines */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '33.33%', height: 1, background: 'rgba(255,255,255,0.12)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '66.66%', height: 1, background: 'rgba(255,255,255,0.12)' }} />
+      {/* Corner brackets */}
+      {[
+        { top: 12, left: 12 },
+        { top: 12, right: 12 },
+        { bottom: 12, left: 12 },
+        { bottom: 12, right: 12 },
+      ].map((pos, i) => {
+        const isRight = pos.right !== undefined
+        const isBottom = pos.bottom !== undefined
+        return (
+          <div key={i} style={{ position: 'absolute', width: 20, height: 20, ...pos }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              {/* Horizontal arm */}
+              <div style={{
+                position: 'absolute',
+                height: 2, width: 14, background: 'rgba(255,255,255,0.7)', borderRadius: 99,
+                top: isBottom ? 'auto' : 0, bottom: isBottom ? 0 : 'auto',
+                left: isRight ? 'auto' : 0, right: isRight ? 0 : 'auto',
+              }} />
+              {/* Vertical arm */}
+              <div style={{
+                position: 'absolute',
+                width: 2, height: 14, background: 'rgba(255,255,255,0.7)', borderRadius: 99,
+                top: isBottom ? 'auto' : 0, bottom: isBottom ? 0 : 'auto',
+                left: isRight ? 'auto' : 0, right: isRight ? 0 : 'auto',
+              }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /* ─────────────── Exercise SVG diagram ─────────────── */
 function ExerciseDiagram() {
   return (
     <svg viewBox="0 0 480 190" fill="none" xmlns="http://www.w3.org/2000/svg"
       style={{ width: '100%', maxWidth: 520 }} aria-label="Elbow flexion exercise diagram">
-      {/* --- POS A: Extended --- */}
       <text x="70" y="14" fontSize="10" fill="#64748b" textAnchor="middle" fontWeight="600">A — Extended</text>
       <circle cx="70" cy="40" r="13" fill="#dbeafe" stroke="#2563eb" strokeWidth="1.5"/>
       <line x1="70" y1="53" x2="70" y2="96" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
@@ -90,12 +152,8 @@ function ExerciseDiagram() {
       <text x="136" y="74" fontSize="9" fill="#94a3b8" fontFamily="monospace">~170°</text>
       <line x1="70" y1="96" x2="56" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
       <line x1="70" y1="96" x2="84" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
-
-      {/* arrow */}
       <line x1="185" y1="80" x2="210" y2="80" stroke="#2563eb" strokeWidth="2"/>
       <polyline points="205,75 213,80 205,85" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-
-      {/* --- POS B: 90° --- */}
       <text x="260" y="14" fontSize="10" fill="#64748b" textAnchor="middle" fontWeight="600">B — 90° Flex</text>
       <circle cx="260" cy="40" r="13" fill="#dbeafe" stroke="#2563eb" strokeWidth="1.5"/>
       <line x1="260" y1="53" x2="260" y2="96" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
@@ -107,12 +165,8 @@ function ExerciseDiagram() {
       <text x="310" y="65" fontSize="9" fill="#2563eb" fontFamily="monospace" fontWeight="700">90°</text>
       <line x1="260" y1="96" x2="246" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
       <line x1="260" y1="96" x2="274" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
-
-      {/* arrow */}
       <line x1="335" y1="80" x2="360" y2="80" stroke="#2563eb" strokeWidth="2"/>
       <polyline points="355,75 363,80 355,85" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-
-      {/* --- POS C: Full Flex --- */}
       <text x="420" y="14" fontSize="10" fill="#64748b" textAnchor="middle" fontWeight="600">C — Max Flex</text>
       <circle cx="420" cy="40" r="13" fill="#dbeafe" stroke="#2563eb" strokeWidth="1.5"/>
       <line x1="420" y1="53" x2="420" y2="96" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
@@ -124,8 +178,6 @@ function ExerciseDiagram() {
       <text x="455" y="70" fontSize="9" fill="#16a34a" fontFamily="monospace" fontWeight="700">~30°</text>
       <line x1="420" y1="96" x2="406" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
       <line x1="420" y1="96" x2="434" y2="130" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/>
-
-      {/* Legend */}
       <circle cx="30" cy="158" r="4" fill="#1e40af"/>
       <text x="38" y="162" fontSize="9" fill="#64748b">Shoulder</text>
       <circle cx="100" cy="158" r="4" fill="#2563eb"/>
@@ -148,6 +200,10 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
   const [apiError,       setApiError]   = useState('')
   const [showGuide,      setShowGuide]  = useState(true)
   const [btnHover,       setBtnHover]   = useState(false)
+  const [isMaximized,    setMaximized]  = useState(false)
+  const [showGrid,       setShowGrid]   = useState(true)
+  const [maxBtnHover,    setMaxBtnHover] = useState(false)
+  const [gridBtnHover,   setGridBtnHover] = useState(false)
 
   const videoRef       = useRef(null)
   const canvasRef      = useRef(null)
@@ -185,6 +241,13 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
     return () => clearInterval(timerRef.current)
   }, [phase])
 
+  // Escape key to exit maximized
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape' && isMaximized) setMaximized(false) }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [isMaximized])
+
   const _finishSession = useCallback(() => {
     const collected = [...angleBufferRef.current]
     const stats = computeSessionStats(collected.map(p => p.angle), patient?.target_angle || TARGET)
@@ -213,7 +276,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
     setLive([]); setSummary(null); setBS(null); setApiError(''); setAngle(null); setPhase('monitoring')
   }
   const reset = () => {
-    clearInterval(timerRef.current); setPhase('idle'); setLive([]); setSummary(null); setAngle(null)
+    clearInterval(timerRef.current); setPhase('idle'); setLive([]); setSummary(null); setAngle(null); setMaximized(false)
   }
 
   const chartData = {
@@ -244,26 +307,48 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
   const timerPct = ((DURATION - timeLeft) / DURATION) * 100
   const r = 46; const circ = 2 * Math.PI * r
 
+  /* ── Angle quality indicator color ── */
+  const angleColor = currentAngle === null ? '#94a3b8'
+    : currentAngle >= (patient?.target_angle || TARGET) ? '#16a34a'
+    : currentAngle >= (patient?.target_angle || TARGET) * 0.7 ? '#f59e0b'
+    : '#ef4444'
+
+  /* ── Shared icon button style ── */
+  const iconBtnStyle = (hovered) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 8,
+    border: `1px solid ${hovered ? '#bfdbfe' : '#e2e8f0'}`,
+    background: hovered ? '#eff6ff' : '#f8fafc',
+    cursor: 'pointer', transition: 'all 0.15s ease',
+    color: hovered ? '#2563eb' : '#64748b',
+  })
+
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: '#1e293b', background: '#f8fafc', minHeight: '100vh', padding: 24, boxSizing: 'border-box' }}>
       <style>{`
         @keyframes ms-spin { to { transform: rotate(360deg); } }
         @keyframes ms-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        @keyframes ms-fadein { from { opacity:0; transform:scale(0.98); } to { opacity:1; transform:scale(1); } }
+        @keyframes ms-slideup { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .ms-cam-maximize-overlay {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 1000 !important;
+          border-radius: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          animation: ms-fadein 0.2s ease;
+        }
       `}</style>
 
       {/* ══════════════ IDLE ══════════════ */}
       {phase === 'idle' && (
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Page title */}
           <div>
             <h2 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: '#0f172a' }}>Monitoring Session</h2>
             <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>AI-powered elbow angle tracking via webcam</p>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 20, alignItems: 'start' }}>
-
-            {/* LEFT: Exercise guide card */}
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#64748b' }}>Exercise Guide</span>
@@ -281,16 +366,12 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                 </div>
               </div>
             </div>
-
-            {/* RIGHT: Ready card + tips */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
                 <h3 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Ready to Monitor</h3>
                 <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: 13, lineHeight: 1.6 }}>
                   Position yourself so your full arm is visible. We'll track your <strong style={{ color: '#1e293b' }}>shoulder → elbow → wrist</strong> for {DURATION} seconds.
                 </p>
-
-                {/* Info rows */}
                 <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '4px 16px', marginBottom: 20 }}>
                   {[
                     ['Patient',       patient?.name || '—'],
@@ -304,7 +385,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                     </div>
                   ))}
                 </div>
-
                 <button
                   onClick={startMonitoring}
                   onMouseEnter={() => setBtnHover(true)}
@@ -326,8 +406,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                   <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', marginTop: 8 }}>Rehab profile required to start.</p>
                 )}
               </div>
-
-              {/* Camera tips */}
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 16, padding: '16px 20px' }}>
                 <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#2563eb' }}>Camera Tips</p>
                 {['Ensure good lighting on your arm', 'Wear a fitted sleeve or roll it up', 'Keep your body centered in frame', 'Avoid fast or jerky movements'].map((t, i) => (
@@ -344,71 +422,175 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
 
       {/* ══════════════ MONITORING ══════════════ */}
       {phase === 'monitoring' && (
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#0f172a' }}>Live Monitoring</h2>
-              <p style={{ margin: '3px 0 0', fontSize: 13, color: '#64748b' }}>Patient: <strong>{patient?.name || '—'}</strong></p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'ms-pulse 1.2s infinite' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#ef4444' }}>Recording</span>
-            </div>
-          </div>
+        <div style={{ maxWidth: isMaximized ? '100%' : 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isMaximized ? 0 : 20 }}>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20, alignItems: 'start' }}>
+          {/* Page header — hidden in maximized mode */}
+          {!isMaximized && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'ms-slideup 0.2s ease' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#0f172a' }}>Live Monitoring</h2>
+                <p style={{ margin: '3px 0 0', fontSize: 13, color: '#64748b' }}>Patient: <strong>{patient?.name || '—'}</strong></p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'ms-pulse 1.2s infinite' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#ef4444' }}>Recording</span>
+              </div>
+            </div>
+          )}
 
-            {/* ── BIG CAMERA PANEL ── */}
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-              {/* Camera bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid #f1f5f9' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', animation: 'ms-pulse 1.2s infinite' }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#64748b' }}>Live Camera Feed</span>
-                </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMaximized ? '1fr' : '1.5fr 1fr',
+            gap: isMaximized ? 0 : 20,
+            alignItems: 'start',
+          }}>
+
+            {/* ══════════════ BIG CAMERA PANEL ══════════════ */}
+            <div
+              className={isMaximized ? 'ms-cam-maximize-overlay' : ''}
+              style={{
+                background: '#fff',
+                border: isMaximized ? 'none' : '1px solid #e2e8f0',
+                borderRadius: isMaximized ? 0 : 16,
+                overflow: 'hidden',
+                boxShadow: isMaximized ? 'none' : '0 2px 12px rgba(0,0,0,0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {/* ── Camera bar ── */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: isMaximized ? '10px 16px' : '12px 18px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#fff',
+                zIndex: 2,
+                flexShrink: 0,
+              }}>
+                {/* Left: status */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', animation: 'ms-pulse 1.2s infinite' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#64748b' }}>Live Camera Feed</span>
+                  </div>
+                  {isMaximized && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 12, borderLeft: '1px solid #f1f5f9' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'ms-pulse 1.2s infinite' }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#ef4444' }}>Recording</span>
+                      <span style={{ fontSize: 11, color: '#94a3b8', paddingLeft: 8 }}>Patient: <strong style={{ color: '#475569' }}>{patient?.name || '—'}</strong></span>
+                    </div>
+                  )}
                   {!poseReady && !poseError && (
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
-                      <Spinner size={14} /> Initializing…
+                      <Spinner size={13} /> Initializing…
                     </span>
                   )}
-                  {poseError && <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Camera error</span>}
+                  {poseError && <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>⚠ Camera error</span>}
+                </div>
+
+                {/* Right: controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Grid toggle */}
+                  <button
+                    title={showGrid ? 'Hide grid' : 'Show grid'}
+                    onClick={() => setShowGrid(g => !g)}
+                    onMouseEnter={() => setGridBtnHover(true)}
+                    onMouseLeave={() => setGridBtnHover(false)}
+                    style={iconBtnStyle(gridBtnHover || showGrid)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                  </button>
+
+                  {/* Guide toggle */}
                   <button
                     onClick={() => setShowGuide(g => !g)}
-                    style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#475569', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{
+                      background: showGuide ? '#eff6ff' : '#f1f5f9',
+                      border: `1px solid ${showGuide ? '#bfdbfe' : '#e2e8f0'}`,
+                      borderRadius: 8, padding: '5px 12px', fontSize: 11,
+                      color: showGuide ? '#2563eb' : '#475569',
+                      cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                      transition: 'all 0.15s',
+                    }}
                   >
                     {showGuide ? 'Hide Guide' : 'Show Guide'}
+                  </button>
+
+                  {/* Divider */}
+                  <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 2px' }} />
+
+                  {/* Maximize / Minimize button */}
+                  <button
+                    title={isMaximized ? 'Minimize (Esc)' : 'Maximize feed'}
+                    onClick={() => setMaximized(m => !m)}
+                    onMouseEnter={() => setMaxBtnHover(true)}
+                    onMouseLeave={() => setMaxBtnHover(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                      border: `1px solid ${maxBtnHover ? '#2563eb' : '#e2e8f0'}`,
+                      background: maxBtnHover ? '#2563eb' : isMaximized ? '#eff6ff' : '#f8fafc',
+                      color: maxBtnHover ? '#fff' : isMaximized ? '#2563eb' : '#475569',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isMaximized
+                      ? <><IconMinimize size={13} color={maxBtnHover ? '#fff' : '#2563eb'} /> Minimize</>
+                      : <><IconMaximize size={13} color={maxBtnHover ? '#fff' : '#64748b'} /> Maximize</>
+                    }
                   </button>
                 </div>
               </div>
 
-              {/* VIDEO — large */}
-              <div style={{ position: 'relative', background: '#0f172a', lineHeight: 0 }}>
+              {/* ── VIDEO WRAPPER ── */}
+              <div style={{
+                position: 'relative', background: '#0f172a', lineHeight: 0,
+                flex: isMaximized ? 1 : 'none',
+              }}>
                 <video
                   ref={videoRef} autoPlay playsInline muted
-                  style={{ width: '100%', display: 'block', objectFit: 'cover', minHeight: 460, maxHeight: 560 }}
+                  style={{
+                    width: '100%', display: 'block', objectFit: 'cover',
+                    minHeight: isMaximized ? 'calc(100vh - 52px - 52px)' : 460,
+                    maxHeight: isMaximized ? 'none' : 560,
+                  }}
                 />
                 <canvas
                   ref={canvasRef}
                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
                 />
 
+                {/* Rule-of-thirds grid */}
+                <CameraGridOverlay visible={showGrid} />
+
                 {/* Loading overlay */}
                 {!poseReady && !poseError && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.78)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#e2e8f0', fontSize: 14 }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.78)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#e2e8f0', fontSize: 14, zIndex: 5 }}>
                     <Spinner size={32} color="#60a5fa" />
                     <span style={{ fontWeight: 500 }}>Initializing pose detection…</span>
                   </div>
                 )}
                 {poseError && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
                     <span style={{ color: '#fca5a5', fontSize: 14, fontWeight: 600 }}>⚠ {poseError}</span>
                   </div>
                 )}
 
                 {/* Exercise guide overlay */}
                 {showGuide && (
-                  <div style={{ position: 'absolute', top: 12, right: 12, width: 186, background: 'rgba(255,255,255,0.97)', border: '1px solid #e2e8f0', borderRadius: 14, padding: 14, boxShadow: '0 4px 20px rgba(0,0,0,0.14)' }}>
+                  <div style={{
+                    position: 'absolute', top: 12, right: 12,
+                    width: isMaximized ? 200 : 186,
+                    background: 'rgba(255,255,255,0.97)',
+                    border: '1px solid #e2e8f0', borderRadius: 14, padding: 14,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.14)', zIndex: 10,
+                    animation: 'ms-slideup 0.2s ease',
+                  }}>
                     <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#2563eb' }}>Exercise Steps</p>
                     {STEPS.map((s, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
@@ -419,35 +601,107 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                   </div>
                 )}
 
-                {/* Current angle chip — bottom left */}
-                <div style={{ position: 'absolute', bottom: 16, left: 16, background: 'rgba(255,255,255,0.97)', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 20px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', textAlign: 'center', minWidth: 110 }}>
-                  <div style={{ fontSize: 36, fontWeight: 700, fontFamily: 'monospace', color: '#2563eb', lineHeight: 1 }}>
+                {/* ── Angle chip — bottom left ── */}
+                <div style={{
+                  position: 'absolute', bottom: 16, left: 16,
+                  background: 'rgba(255,255,255,0.97)',
+                  border: `1.5px solid ${angleColor}33`,
+                  borderRadius: 16, padding: '14px 20px',
+                  boxShadow: `0 4px 20px ${angleColor}22, 0 1px 4px rgba(0,0,0,0.12)`,
+                  textAlign: 'center', minWidth: 120, zIndex: 10,
+                  animation: 'ms-slideup 0.2s ease',
+                }}>
+                  <div style={{ fontSize: isMaximized ? 44 : 36, fontWeight: 700, fontFamily: 'monospace', color: angleColor, lineHeight: 1, transition: 'color 0.3s' }}>
                     {currentAngle !== null ? `${currentAngle}°` : '—'}
                   </div>
                   <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: '#64748b', marginTop: 4 }}>Elbow Angle</div>
                   <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Target: <strong style={{ color: '#475569' }}>{patient?.target_angle || TARGET}°</strong></div>
+                  {/* Quality indicator dot */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 6 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: angleColor, animation: 'ms-pulse 1.5s infinite' }} />
+                    <span style={{ fontSize: 10, fontWeight: 600, color: angleColor }}>
+                      {currentAngle === null ? 'Detecting…'
+                        : currentAngle >= (patient?.target_angle || TARGET) ? 'On Target'
+                        : currentAngle >= (patient?.target_angle || TARGET) * 0.7 ? 'Close'
+                        : 'Below Target'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Frames chip — bottom right */}
-                <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(255,255,255,0.92)', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#64748b' }}>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>{liveAngles.length}</span> frames
-                </div>
+                {/* ── In-feed stats row (maximized only) ── */}
+                {isMaximized && liveAngles.length > 5 && (() => {
+                  const s = computeSessionStats(liveAngles.map(p => p.angle), patient?.target_angle)
+                  return (
+                    <div style={{
+                      position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+                      display: 'flex', gap: 8, zIndex: 10,
+                    }}>
+                      {[['Avg', `${s.avg}°`], ['Max', `${s.max}°`], ['Min', `${s.min}°`], ['Acc', `${s.accuracy}%`]].map(([l, v]) => (
+                        <div key={l} style={{
+                          background: 'rgba(255,255,255,0.95)', border: '1px solid #e2e8f0',
+                          borderRadius: 10, padding: '8px 14px', textAlign: 'center',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'monospace', color: '#2563eb' }}>{v}</div>
+                          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: '#94a3b8' }}>{l}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
+                {/* ── Timer chip (maximized) ── */}
+                {isMaximized && (
+                  <div style={{
+                    position: 'absolute', bottom: 16, right: 16, zIndex: 10,
+                    background: 'rgba(255,255,255,0.96)', border: '1px solid #e2e8f0',
+                    borderRadius: 14, padding: '10px 18px', textAlign: 'center',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+                          <circle cx="26" cy="26" r="20" fill="none" stroke="#f1f5f9" strokeWidth="4" />
+                          <circle cx="26" cy="26" r="20" fill="none" stroke="#2563eb" strokeWidth="4"
+                            strokeDasharray={2 * Math.PI * 20} strokeDashoffset={(2 * Math.PI * 20) - (2 * Math.PI * 20 * timerPct / 100)}
+                            strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                        </svg>
+                        <div style={{ position: 'absolute', textAlign: 'center' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', lineHeight: 1 }}>{timeLeft}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Time Left</div>
+                        <div style={{ fontSize: 11, color: '#475569', fontWeight: 600 }}>{liveAngles.length} frames</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Frames chip — bottom right (non-maximized only) */}
+                {!isMaximized && (
+                  <div style={{ position: 'absolute', bottom: 16, right: 16, background: 'rgba(255,255,255,0.92)', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 14px', fontSize: 12, color: '#64748b', zIndex: 10 }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>{liveAngles.length}</span> frames
+                  </div>
+                )}
               </div>
 
-              {/* Progress bar under video */}
-              {currentAngle !== null && (
+              {/* Progress bar under video — hidden when maximized */}
+              {!isMaximized && currentAngle !== null && (
                 <div style={{ padding: '12px 18px 14px', borderTop: '1px solid #f1f5f9', background: '#fff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 5 }}>
                     <span>Current vs Target</span>
-                    <span style={{ fontWeight: 600, color: currentAngle >= (patient?.target_angle || TARGET) ? '#16a34a' : '#2563eb' }}>
-                      {currentAngle >= (patient?.target_angle || TARGET) ? 'On Target' : 'Below Target'}
+                    <span style={{ fontWeight: 600, color: angleColor }}>
+                      {currentAngle >= (patient?.target_angle || TARGET) ? 'On Target'
+                        : currentAngle >= (patient?.target_angle || TARGET) * 0.7 ? 'Close'
+                        : 'Below Target'}
                     </span>
                   </div>
                   <div style={{ height: 7, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: 99,
                       width: `${Math.min(100, (currentAngle / 180) * 100)}%`,
-                      background: currentAngle >= (patient?.target_angle || TARGET) ? '#16a34a' : '#2563eb',
+                      background: `linear-gradient(90deg, #3b82f6, ${angleColor})`,
                       transition: 'width 0.3s ease',
                     }} />
                   </div>
@@ -460,49 +714,48 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
               )}
             </div>
 
-            {/* ── RIGHT COLUMN ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* ── RIGHT COLUMN (hidden when maximized) ── */}
+            {!isMaximized && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'ms-slideup 0.25s ease' }}>
+                {/* Circular timer */}
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Time Remaining</p>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx="60" cy="60" r={r} fill="none" stroke="#f1f5f9" strokeWidth="7" />
+                      <circle cx="60" cy="60" r={r} fill="none" stroke="#2563eb" strokeWidth="7"
+                        strokeDasharray={circ} strokeDashoffset={circ - (circ * timerPct / 100)}
+                        strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                    </svg>
+                    <div style={{ position: 'absolute', textAlign: 'center' }}>
+                      <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', lineHeight: 1 }}>{timeLeft}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: 1, marginTop: 2 }}>SEC</div>
+                    </div>
+                  </div>
+                  {liveAngles.length > 5 && (() => {
+                    const s = computeSessionStats(liveAngles.map(p => p.angle), patient?.target_angle)
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, width: '100%' }}>
+                        {[['Avg', `${s.avg}°`], ['Max', `${s.max}°`], ['Min', `${s.min}°`], ['Acc', `${s.accuracy}%`]].map(([l, v]) => (
+                          <div key={l} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 4px', textAlign: 'center' }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: '#2563eb' }}>{v}</div>
+                            <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: '#94a3b8', marginTop: 2 }}>{l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
 
-              {/* Circular timer */}
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Time Remaining</p>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="60" cy="60" r={r} fill="none" stroke="#f1f5f9" strokeWidth="7" />
-                    <circle cx="60" cy="60" r={r} fill="none" stroke="#2563eb" strokeWidth="7"
-                      strokeDasharray={circ} strokeDashoffset={circ - (circ * timerPct / 100)}
-                      strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
-                  </svg>
-                  <div style={{ position: 'absolute', textAlign: 'center' }}>
-                    <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'monospace', color: '#0f172a', lineHeight: 1 }}>{timeLeft}</div>
-                    <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: 1, marginTop: 2 }}>SEC</div>
+                {/* Live chart */}
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', flex: 1 }}>
+                  <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Live Angle Feed</p>
+                  <div style={{ height: 200 }}>
+                    <Line data={chartData} options={chartOpts} />
                   </div>
                 </div>
-
-                {/* Mini stats */}
-                {liveAngles.length > 5 && (() => {
-                  const s = computeSessionStats(liveAngles.map(p => p.angle), patient?.target_angle)
-                  return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, width: '100%' }}>
-                      {[['Avg', `${s.avg}°`], ['Max', `${s.max}°`], ['Min', `${s.min}°`], ['Acc', `${s.accuracy}%`]].map(([l, v]) => (
-                        <div key={l} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 4px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: '#2563eb' }}>{v}</div>
-                          <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', color: '#94a3b8', marginTop: 2 }}>{l}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
               </div>
-
-              {/* Live chart */}
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '18px 20px', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', flex: 1 }}>
-                <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Live Angle Feed</p>
-                <div style={{ height: 200 }}>
-                  <Line data={chartData} options={chartOpts} />
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -510,8 +763,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
       {/* ══════════════ COMPLETE ══════════════ */}
       {phase === 'complete' && summary && (
         <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Header */}
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '28px 32px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -520,8 +771,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
             <p style={{ margin: '0 0 14px', color: '#64748b', fontSize: 14 }}>{DURATION}-second session · {summary.count} frames collected</p>
             {backendSession && <StatusBadge status={backendSession.injury_status} />}
           </div>
-
-          {/* Status delta banner */}
           {backendSession && (() => {
             const c = STATUS_CFG[backendSession.injury_status] || STATUS_CFG.stable
             return (
@@ -540,8 +789,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
               </div>
             )
           })()}
-
-          {/* Metrics grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             {[
               ['Avg Angle',   `${summary.avg}°`,         true],
@@ -552,8 +799,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
               ['Std Dev',     `${summary.stdDev}°`,      false],
             ].map(([l, v, a]) => <MetricCard key={l} label={l} value={v} accent={a} />)}
           </div>
-
-          {/* Summary chart */}
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
             <p style={{ margin: '0 0 14px', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8' }}>Session Recording — Angle vs Time</p>
             <div style={{ height: 220 }}>
@@ -569,8 +814,6 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
               />
             </div>
           </div>
-
-          {/* Actions */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             {submitting && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748b' }}>
