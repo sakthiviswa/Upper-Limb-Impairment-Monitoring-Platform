@@ -1,6 +1,6 @@
 /**
- * PatientDashboard — Redesigned UI
- * Same functionality as original (Flask + FastAPI), new professional layout.
+ * PatientDashboard — with doctor assignment status + notifications
+ * Same core functionality preserved; added doctor-acceptance banner and notification panel.
  */
 
 import { useState, useEffect } from 'react'
@@ -9,11 +9,12 @@ import api from '../utils/api'
 import rehabApi from '../utils/rehabApi'
 import MonitoringSession from '../rehab/MonitoringSession'
 import SessionHistory    from '../rehab/SessionHistory'
-import DashboardLayout from '../components/layout/DashboardLayout'
+import DashboardLayout   from '../components/layout/DashboardLayout'
 import { StatCard, SectionCard, Badge, DataTable } from '../components/ui/Cards'
+import NotificationsPanel from '../components/NotificationsPanel'
 import {
   CalendarDays, Pill, Heart, Play, Activity, FileText,
-  Clock, AlertCircle, TrendingUp, ChevronRight, Zap,
+  Clock, AlertCircle, TrendingUp, ChevronRight, Zap, Bell,
 } from 'lucide-react'
 
 const STATUS_VARIANT = {
@@ -30,11 +31,15 @@ export default function PatientDashboard() {
   const [error, setError]       = useState('')
   const [rehabPatient, setRP]   = useState(null)
   const [lastSession, setLast]  = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   // ── Load Flask dashboard data ─────────────────────────────────────────────
   useEffect(() => {
     api.get('/patient/dashboard')
-      .then(r => setDashData(r.data.data))
+      .then(r => {
+        setDashData(r.data.data)
+        setUnreadCount(r.data.data.unread_notifications || 0)
+      })
       .catch(() => setError('Failed to load dashboard data.'))
       .finally(() => setLoading(false))
   }, [])
@@ -82,21 +87,91 @@ export default function PatientDashboard() {
                 Here's your rehabilitation status overview
               </p>
             </div>
-            {lastSession && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
-                padding: '0.5rem 0.875rem', fontSize: '0.75rem', color: '#374151',
-              }}>
-                <Activity size={13} color="#6b7280" />
-                <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                  Last session: {lastSession.injury_status?.replace('_', ' ')}
-                </span>
-                <span style={{ color: '#9ca3af' }}>·</span>
-                <span>{lastSession.avg_angle}° avg</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+              {/* Notifications bell */}
+              <button
+                onClick={() => setTab('notifications')}
+                style={{
+                  position: 'relative',
+                  background: '#fff', border: '1px solid #e5e7eb',
+                  borderRadius: 8, padding: '0.5rem 0.75rem',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  fontSize: '0.8125rem', color: '#374151',
+                }}
+              >
+                <Bell size={14} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    background: '#ef4444', color: '#fff',
+                    borderRadius: 10, padding: '0.05rem 0.35rem',
+                    fontSize: '0.65rem', fontWeight: 700,
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {lastSession && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
+                  padding: '0.5rem 0.875rem', fontSize: '0.75rem', color: '#374151',
+                }}>
+                  <Activity size={13} color="#6b7280" />
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                    Last session: {lastSession.injury_status?.replace('_', ' ')}
+                  </span>
+                  <span style={{ color: '#9ca3af' }}>·</span>
+                  <span>{lastSession.avg_angle}° avg</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Doctor assignment status banner */}
+          {dashData && (
+            <div style={{
+              padding: '0.875rem 1rem',
+              borderRadius: 8,
+              background: dashData.doctor_accepted ? '#f0fdf4' : '#fefce8',
+              border: `1px solid ${dashData.doctor_accepted ? '#86efac' : '#fde047'}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              fontSize: '0.8125rem',
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>{dashData.doctor_accepted ? '✅' : '⏳'}</span>
+              <div>
+                {dashData.doctor_accepted ? (
+                  <>
+                    <strong style={{ color: '#15803d' }}>Doctor assigned: </strong>
+                    <span style={{ color: '#166534' }}>
+                      Dr. {dashData.assigned_doctor} has accepted your care request.
+                      You can see their details in your{' '}
+                      <button
+                        onClick={() => window.location.href = '/profile'}
+                        style={{ background: 'none', border: 'none', color: '#15803d', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                      >
+                        profile
+                      </button>.
+                    </span>
+                  </>
+                ) : (
+                  <span style={{ color: '#854d0e' }}>
+                    Waiting for a doctor to accept your request.{' '}
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() => setTab('notifications')}
+                        style={{ background: 'none', border: 'none', color: '#92400e', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                      >
+                        You have {unreadCount} new notification{unreadCount > 1 ? 's' : ''}.
+                      </button>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -113,32 +188,14 @@ export default function PatientDashboard() {
             <>
               {/* Stats row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem' }}>
-                <StatCard
-                  label="Upcoming Appointments"
-                  value={dashData.appointments.length}
-                  icon={CalendarDays}
-                />
-                <StatCard
-                  label="Active Prescriptions"
-                  value={dashData.prescriptions}
-                  icon={Pill}
-                />
-                <StatCard
-                  label="Health Score"
-                  value={dashData.health_score}
-                  icon={Heart}
-                />
+                <StatCard label="Upcoming Appointments" value={dashData.appointments.length} icon={CalendarDays} />
+                <StatCard label="Active Prescriptions"  value={dashData.prescriptions}        icon={Pill} />
+                <StatCard label="Health Score"          value={dashData.health_score}          icon={Heart} />
               </div>
 
               {/* Two-column row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '0.875rem' }}>
-
-                {/* Appointments table */}
-                <SectionCard
-                  title="Upcoming Appointments"
-                  subtitle={`${dashData.appointments.length} scheduled`}
-                  noPad
-                >
+                <SectionCard title="Upcoming Appointments" subtitle={`${dashData.appointments.length} scheduled`} noPad>
                   <DataTable
                     columns={['Doctor', 'Date', 'Status']}
                     rows={dashData.appointments.map(a => [
@@ -149,14 +206,8 @@ export default function PatientDashboard() {
                   />
                 </SectionCard>
 
-                {/* Rehab CTA */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                  <div style={{
-                    background: '#0f172a',
-                    borderRadius: 10,
-                    padding: '1.375rem 1.25rem',
-                    color: '#fff',
-                  }}>
+                  <div style={{ background: '#0f172a', borderRadius: 10, padding: '1.375rem 1.25rem', color: '#fff' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                       <Zap size={15} color="#e2e8f0" strokeWidth={1.75} />
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -186,7 +237,6 @@ export default function PatientDashboard() {
                     </button>
                   </div>
 
-                  {/* Quick info cards */}
                   <SectionCard title="About the System" subtitle="Rehabilitation monitoring">
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {[
@@ -205,7 +255,6 @@ export default function PatientDashboard() {
                 </div>
               </div>
 
-              {/* Session history preview link */}
               <button
                 onClick={() => setTab('history')}
                 style={{
@@ -228,6 +277,26 @@ export default function PatientDashboard() {
         </div>
       )}
 
+      {/* ── Notifications Tab ─────────────────────────────────────────────── */}
+      {tab === 'notifications' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <h1 style={{ fontSize: '1.1875rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+              Notifications
+            </h1>
+            <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
+              Doctor assignment updates and system alerts
+            </p>
+          </div>
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+            <NotificationsPanel
+              role="patient"
+              onCountChange={setUnreadCount}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── Rehab Monitor ─────────────────────────────────────────────────── */}
       {tab === 'monitor' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -239,12 +308,8 @@ export default function PatientDashboard() {
               Live webcam session · MediaPipe angle tracking
             </p>
           </div>
-
           {!patientForRehab ? (
-            <div style={{
-              background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10,
-              padding: '3rem', textAlign: 'center', color: '#9ca3af',
-            }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
               <Activity size={28} strokeWidth={1} style={{ marginBottom: '0.75rem', opacity: 0.4 }} />
               <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>Setting up your rehabilitation profile…</div>
             </div>
@@ -272,9 +337,7 @@ export default function PatientDashboard() {
       {tab === 'history' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.1875rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-              Session History
-            </h1>
+            <h1 style={{ fontSize: '1.1875rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Session History</h1>
             <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
               Your past rehabilitation sessions and angle progression
             </p>
@@ -291,17 +354,8 @@ export default function PatientDashboard() {
 
 function LoadingScreen() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '0.75rem',
-    }}>
-      <div style={{
-        width: 36, height: 36,
-        border: '3px solid #e5e7eb',
-        borderTopColor: '#0f172a',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-      }} />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ width: 36, height: 36, border: '3px solid #e5e7eb', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
       <p style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>Loading dashboard…</p>
     </div>
   )

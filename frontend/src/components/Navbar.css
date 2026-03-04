@@ -1,0 +1,57 @@
+/* Additional styling for Navbar dropdown and profile button */
+/* encourages blue/green palette to match theme */
+
+/* currently most styles are inline; these rules adjust spacing or hover behaviours */
+
+/* Avatar button spacing override if needed */
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+/* dropdown menu appearance */
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  min-width: 180px;
+  z-index: 100;
+}
+
+.dropItem {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.dropItem:hover {
+  background-color: #f1f5f9;
+}
+
+.logoutBtn {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #b91c1c;
+}
+
+.logoutBtn:hover {
+  background-color: #fee2e2;
+}

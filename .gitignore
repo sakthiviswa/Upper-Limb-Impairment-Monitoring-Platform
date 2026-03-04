@@ -1,0 +1,63 @@
+###############################################################################
+# Core: only track source/config, ignore build & environment artifacts
+###############################################################################
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# SQLite / local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / React
+node_modules/
+dist/
+build/
+.parcel-cache/
+.turbo/
+.next/
+yarn.lock
+pnpm-lock.yaml
+package-lock.json
+
+# Logs & OS cruft
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Environment / secrets
+.env
+.env.*
+
+###############################################################################
+# Positive patterns: typical project files you *do* commit
+# (These don't force-include; they document what should be in git.)
+#
+# - Source:   *.py, *.js, *.jsx, *.ts, *.tsx, *.css, *.scss, *.html
+# - Config:   *.json, *.yaml, *.yml, *.toml, *.ini, *.cfg
+# - Text:     *.md, *.txt, LICENSE, README*
+###############################################################################
+

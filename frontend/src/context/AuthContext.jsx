@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem('user')
     return stored ? JSON.parse(stored) : null
   })
+  const [token, setToken] = useState(() => localStorage.getItem('token'))
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
@@ -20,6 +21,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
+    setToken(data.token)
     return data.user
   }, [])
 
@@ -29,6 +31,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
+    setToken(data.token)
     return data.user
   }, [])
 
@@ -37,10 +40,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setUser(null)
+    setToken(null)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,11 +1,7 @@
-/**
- * App.jsx – Root component with React Router v6 setup
- */
-
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 
-import Navbar              from './components/Navbar'
+import Navbar              from './components/layout/Navbar'
 import ProtectedRoute      from './components/ProtectedRoute'
 import RoleBasedRedirect   from './components/RoleBasedRedirect'
 
@@ -15,6 +11,7 @@ import PatientDashboard    from './dashboards/PatientDashboard'
 import DoctorDashboard     from './dashboards/DoctorDashboard'
 import AdminDashboard      from './dashboards/AdminDashboard'
 import UnauthorizedPage    from './pages/UnauthorizedPage'
+import ProfileSettings     from './components/ProfileSettings'
 
 import './App.css';
 
@@ -47,6 +44,11 @@ export default function App() {
             <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Route>
+            {/* User profile / settings (all authenticated roles) */}
+            <Route element={<ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']} />}>
+              <Route path="/profile" element={<ProfileSettings />} />
+              <Route path="/settings" element={<ProfileSettings />} />
+            </Route>
           </Route>
 
           {/* Fallback */}
@@ -59,9 +61,12 @@ export default function App() {
 
 /** Layout wrapper that renders Navbar above protected content */
 function WithNavbar() {
+  const { user } = useAuth()
+  const role = user?.role || 'patient'
+
   return (
     <>
-      <Navbar />
+      <Navbar user={user} role={role} />
       <Outlet />
     </>
   )

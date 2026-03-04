@@ -1,6 +1,6 @@
 """
 User Model
-Defines the User table with role-based fields
+Defines the User table with role-based fields (personal + medical + rehab)
 """
 
 from datetime import datetime, timezone
@@ -23,6 +23,30 @@ class User(db.Model):
         db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
+    # ── Personal fields (all roles) ───────────────────────────────────────────
+    age          = db.Column(db.Integer, nullable=True)
+    gender       = db.Column(db.String(20), nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+
+    # ── Patient-only medical fields ───────────────────────────────────────────
+    injured_arm      = db.Column(db.String(20),  nullable=True)
+    injury_type      = db.Column(db.String(50),  nullable=True)
+    injury_severity  = db.Column(db.String(20),  nullable=True)
+    date_of_injury   = db.Column(db.String(20),  nullable=True)   # stored as ISO date string
+    doctor_name      = db.Column(db.String(120), nullable=True)
+
+    # ── Patient rehab preferences ─────────────────────────────────────────────
+    session_duration  = db.Column(db.Integer, nullable=True, default=30)
+    difficulty_level  = db.Column(db.String(20), nullable=True)
+    reminder_enabled  = db.Column(db.Boolean, default=False)
+
+    # ── Doctor-patient relationship ───────────────────────────────────────────
+    # Tracks which doctor (user id) has accepted this patient's request
+    assigned_doctor_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True
+    )
+    doctor_accepted    = db.Column(db.Boolean, default=False)
+
     # ── Password helpers ───────────────────────────────────────────────────────
     @property
     def password(self):
@@ -38,11 +62,24 @@ class User(db.Model):
     # ── Serialisation ──────────────────────────────────────────────────────────
     def to_dict(self):
         return {
-            "id": self.id,
-            "name": self.name,
-            "email": self.email,
-            "role": self.role,
-            "created_at": self.created_at.isoformat(),
+            "id":                 self.id,
+            "name":               self.name,
+            "email":              self.email,
+            "role":               self.role,
+            "age":                self.age,
+            "gender":             self.gender,
+            "phoneNumber":        self.phone_number,
+            "injuredArm":         self.injured_arm,
+            "injuryType":         self.injury_type,
+            "injurySeverity":     self.injury_severity,
+            "dateOfInjury":       self.date_of_injury,
+            "doctorName":         self.doctor_name,
+            "sessionDuration":    self.session_duration,
+            "difficultyLevel":    self.difficulty_level,
+            "reminderEnabled":    self.reminder_enabled,
+            "assignedDoctorId":   self.assigned_doctor_id,
+            "doctorAccepted":     self.doctor_accepted,
+            "created_at":         self.created_at.isoformat(),
         }
 
     def __repr__(self):
