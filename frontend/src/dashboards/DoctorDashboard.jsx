@@ -4,11 +4,13 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import { StatCard, SectionCard, Badge, DataTable } from '../components/ui/Cards'
 import NotificationsPanel from '../components/NotificationsPanel'
+import ProfileSettings from '../components/ProfileSettings'
 import {
   Users, ClipboardList, Activity, CheckCircle, MessageSquare,
   Bell, AlertCircle, UserPlus,
@@ -22,13 +24,21 @@ const TYPE_VARIANT = {
 
 export default function DoctorDashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const urlParams = new URLSearchParams(location.search)
+  const initialTab = urlParams.get('tab') || 'overview'
   const [data, setData]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState('')
-  const [tab, setTab]               = useState('overview')
+  const [tab, setTab]               = useState(initialTab)
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingPatients, setPendingPatients] = useState([])
   const [acting, setActing]         = useState({})
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab)
+  }
 
   useEffect(() => {
     api.get('/doctor/dashboard')
@@ -335,6 +345,16 @@ export default function DoctorDashboard() {
               />
             </div>
           </>
+        )}
+
+        {/* ── Profile ────────────────────────────────────────────────────────── */}
+        {tab === 'profile' && (
+          <ProfileSettings viewMode={true} />
+        )}
+
+        {/* ── Settings ───────────────────────────────────────────────────────── */}
+        {tab === 'settings' && (
+          <ProfileSettings viewMode={false} />
         )}
 
       </div>

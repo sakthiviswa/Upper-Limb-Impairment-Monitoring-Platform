@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 import Navbar              from './components/layout/Navbar'
@@ -14,6 +14,15 @@ import UnauthorizedPage    from './pages/UnauthorizedPage'
 import ProfileSettings     from './components/ProfileSettings'
 
 import './App.css';
+
+// Component to redirect /profile and /settings to dashboard with tab
+function RedirectToDashboard() {
+  const { user } = useAuth()
+  const role = user?.role || 'patient'
+  const location = useLocation()
+  const tab = location.pathname === '/profile' ? 'profile' : 'settings'
+  return <Navigate to={`/${role}/dashboard?tab=${tab}`} replace />
+}
 
 export default function App() {
   return (
@@ -46,8 +55,8 @@ export default function App() {
             </Route>
             {/* User profile / settings (all authenticated roles) */}
             <Route element={<ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']} />}>
-              <Route path="/profile" element={<ProfileSettings />} />
-              <Route path="/settings" element={<ProfileSettings />} />
+              <Route path="/profile" element={<RedirectToDashboard />} />
+              <Route path="/settings" element={<RedirectToDashboard />} />
             </Route>
           </Route>
 

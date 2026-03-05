@@ -1,9 +1,7 @@
 .profile-settings {
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem;
   background: #f9fafb;
-  min-height: 100vh;
 }
 
 .profile-settings h2 {

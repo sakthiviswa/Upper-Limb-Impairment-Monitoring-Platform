@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import rehabApi from '../utils/rehabApi'
@@ -12,6 +13,7 @@ import SessionHistory    from '../rehab/SessionHistory'
 import DashboardLayout   from '../components/layout/DashboardLayout'
 import { StatCard, SectionCard, Badge, DataTable } from '../components/ui/Cards'
 import NotificationsPanel from '../components/NotificationsPanel'
+import ProfileSettings from '../components/ProfileSettings'
 import {
   CalendarDays, Pill, Heart, Play, Activity, FileText,
   Clock, AlertCircle, TrendingUp, ChevronRight, Zap, Bell,
@@ -25,13 +27,21 @@ const STATUS_VARIANT = {
 
 export default function PatientDashboard() {
   const { user } = useAuth()
-  const [tab, setTab]           = useState('overview')
+  const navigate = useNavigate()
+  const location = useLocation()
+  const urlParams = new URLSearchParams(location.search)
+  const initialTab = urlParams.get('tab') || 'overview'
+  const [tab, setTab]           = useState(initialTab)
   const [dashData, setDashData] = useState(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
   const [rehabPatient, setRP]   = useState(null)
   const [lastSession, setLast]  = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab)
+  }
 
   // ── Load Flask dashboard data ─────────────────────────────────────────────
   useEffect(() => {
@@ -71,7 +81,7 @@ export default function PatientDashboard() {
   if (loading) return <LoadingScreen />
 
   return (
-    <DashboardLayout user={user} role="patient" activeTab={tab} onTabChange={setTab}>
+    <DashboardLayout user={user} role="patient" activeTab={tab} onTabChange={handleTabChange}>
 
       {/* ── Overview ──────────────────────────────────────────────────────── */}
       {tab === 'overview' && (
@@ -346,6 +356,16 @@ export default function PatientDashboard() {
             <SessionHistory patient={patientForRehab} />
           </div>
         </div>
+      )}
+
+      {/* ── Profile ────────────────────────────────────────────────────────── */}
+      {tab === 'profile' && (
+        <ProfileSettings viewMode={true} />
+      )}
+
+      {/* ── Settings ───────────────────────────────────────────────────────── */}
+      {tab === 'settings' && (
+        <ProfileSettings viewMode={false} />
       )}
 
     </DashboardLayout>

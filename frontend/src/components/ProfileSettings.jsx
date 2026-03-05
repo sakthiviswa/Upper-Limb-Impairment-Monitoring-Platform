@@ -4,11 +4,11 @@ import api from '../utils/api'
 import { useLocation } from 'react-router-dom'
 import './ProfileSettings.css'
 
-export default function ProfileSettings() {
+export default function ProfileSettings({ viewMode: propViewMode }) {
   const { user } = useAuth()
   const role = user?.role
   const location = useLocation()
-  const viewMode = location.pathname === '/profile'
+  const viewMode = propViewMode !== undefined ? propViewMode : location.pathname === '/profile'
 
   const [form, setForm] = useState({
     fullName: '',
