@@ -1,22 +1,27 @@
-import { Activity, Users, Shield, Home, Play, Clock, FileText, Bell, Settings, ChevronRight, Heart } from 'lucide-react'
+import { Activity, Users, Shield, Home, Play, Clock, FileText, Bell, Settings, ChevronRight, Heart, User } from 'lucide-react'
 
 const NAV_ITEMS = {
   patient: [
     { id: 'overview',  label: 'Overview',        icon: Home },
     { id: 'monitor',   label: 'Rehab Monitor',   icon: Play },
     { id: 'history',   label: 'Session History', icon: Clock },
+    { id: 'profile',   label: 'Profile',         icon: User },
+    { id: 'settings',  label: 'Settings',        icon: Settings },
   ],
   doctor: [
     { id: 'overview',  label: 'Overview',        icon: Home },
     { id: 'patients',  label: 'My Patients',     icon: Users },
     { id: 'reports',   label: 'Reports',         icon: FileText },
     { id: 'analytics', label: 'Analytics',       icon: Activity },
+    { id: 'profile',   label: 'Profile',         icon: User },
+    { id: 'settings',  label: 'Settings',        icon: Settings },
   ],
   admin: [
     { id: 'overview',  label: 'Overview',        icon: Home },
     { id: 'users',     label: 'User Management', icon: Users },
     { id: 'activity',  label: 'System Activity', icon: Activity },
     { id: 'settings',  label: 'Settings',        icon: Settings },
+    { id: 'profile',   label: 'Profile',         icon: User },
   ],
 }
 

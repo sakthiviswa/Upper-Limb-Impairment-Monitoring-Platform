@@ -52,10 +52,13 @@ def create_app(env: str = None) -> Flask:
 
     # ── Create tables on first run ─────────────────────────────────────────────
     with app.app_context():
+        # Import all models so SQLAlchemy registers them before create_all()
+        from models.user import User
+        from models.notification import Notification  # NEW
+
         db.create_all()
 
         # Seed a default admin if none exists
-        from models.user import User
         if not User.query.filter_by(role="admin").first():
             admin = User(name="System Admin", email="admin@healthcare.dev", role="admin")
             admin.password = "Admin@1234"
