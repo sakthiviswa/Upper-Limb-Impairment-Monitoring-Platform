@@ -17,7 +17,8 @@
 *.so
 *.egg-info/
 *.egg
-
+backend\routers\__pycache__
+backend\routes\__pycache__
 # Testing / lint caches
 
 .pytest_cache/
