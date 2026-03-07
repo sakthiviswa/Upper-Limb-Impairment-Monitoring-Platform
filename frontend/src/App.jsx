@@ -12,6 +12,7 @@ import DoctorDashboard     from './dashboards/DoctorDashboard'
 import AdminDashboard      from './dashboards/AdminDashboard'
 import UnauthorizedPage    from './pages/UnauthorizedPage'
 import ProfileSettings     from './components/ProfileSettings'
+import ToastProvider from './components/ToastProvider'
 
 import './App.css';
 
@@ -26,6 +27,7 @@ function RedirectToDashboard() {
 
 export default function App() {
   return (
+    <ToastProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -65,6 +67,7 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ToastProvider>
   )
 }
 

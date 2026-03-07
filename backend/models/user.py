@@ -32,7 +32,7 @@ class User(db.Model):
     injured_arm      = db.Column(db.String(20),  nullable=True)
     injury_type      = db.Column(db.String(50),  nullable=True)
     injury_severity  = db.Column(db.String(20),  nullable=True)
-    date_of_injury   = db.Column(db.String(20),  nullable=True)   # stored as ISO date string
+    date_of_injury   = db.Column(db.String(20),  nullable=True)
     doctor_name      = db.Column(db.String(120), nullable=True)
 
     # ── Patient rehab preferences ─────────────────────────────────────────────
@@ -41,13 +41,17 @@ class User(db.Model):
     reminder_enabled  = db.Column(db.Boolean, default=False)
 
     # ── Doctor-patient relationship ───────────────────────────────────────────
-    # Tracks which doctor (user id) has accepted this patient's request
+    # The doctor the patient specifically selected in their profile
+    selected_doctor_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=True
+    )
+    # The doctor who actually accepted (set on accept)
     assigned_doctor_id = db.Column(
         db.Integer, db.ForeignKey("users.id"), nullable=True
     )
-    doctor_accepted    = db.Column(db.Boolean, default=False)
+    doctor_accepted = db.Column(db.Boolean, default=False)
 
-    # ── Password helpers ───────────────────────────────────────────────────────
+    # ── Password helpers ──────────────────────────────────────────────────────
     @property
     def password(self):
         raise AttributeError("Password is write-only")
@@ -59,11 +63,12 @@ class User(db.Model):
     def check_password(self, plain_text: str) -> bool:
         return bcrypt.check_password_hash(self._password, plain_text)
 
-    # ── Serialisation ──────────────────────────────────────────────────────────
+    # ── Serialisation ─────────────────────────────────────────────────────────
     def to_dict(self):
         return {
             "id":                 self.id,
             "name":               self.name,
+            "fullName":           self.name,
             "email":              self.email,
             "role":               self.role,
             "age":                self.age,
@@ -77,6 +82,7 @@ class User(db.Model):
             "sessionDuration":    self.session_duration,
             "difficultyLevel":    self.difficulty_level,
             "reminderEnabled":    self.reminder_enabled,
+            "selectedDoctorId":   self.selected_doctor_id,
             "assignedDoctorId":   self.assigned_doctor_id,
             "doctorAccepted":     self.doctor_accepted,
             "created_at":         self.created_at.isoformat(),
