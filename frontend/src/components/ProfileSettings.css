@@ -1,311 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 .profile-settings {
-  max-width: 900px;
+  font-family: 'Sora', sans-serif;
+  max-width: 780px;
   margin: 0 auto;
-  background: #f9fafb;
+  padding: 0.25rem 0;
 }
 
 .profile-settings h2 {
-  font-size: 1.875rem;
+  font-size: 1.1875rem;
   font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 2rem;
-  text-align: center;
+  color: #0d1117;
+  margin: 0 0 1.25rem;
+  letter-spacing: -0.02em;
 }
 
-/* Messages */
-.error-message {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  color: #991b1b;
-  font-size: 0.9375rem;
+/* ── Banners ── */
+.doctor-banner {
+  margin-bottom: 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.doctor-banner.accepted { background: #f0fdf4; border: 1px solid #86efac; }
+.doctor-banner.pending  { background: #fffbeb; border: 1px solid #fde68a; }
+.doctor-banner-icon     { display: flex; align-items: center; margin-top: 1px; flex-shrink: 0; }
+.doctor-banner.accepted strong { color: #15803d; }
+.doctor-banner.accepted span   { color: #166534; }
+.doctor-banner.pending  span   { color: #854d0e; }
+
+.notif-banner {
+  margin-bottom: 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  font-size: 0.8125rem;
+  color: #1e40af;
+  line-height: 1.5;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.error-message::before {
-  content: '⚠️';
-  font-size: 1.25rem;
-}
-
-.success-message {
-  background: #dcfce7;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  color: #166534;
-  font-size: 0.9375rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.success-message::before {
-  content: '✓';
-  font-size: 1.25rem;
-  font-weight: bold;
-}
-
-/* Loading Spinner */
-.spinner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 300px;
-  font-size: 1.125rem;
-  color: #6b7280;
-}
-
-.spinner::after {
-  content: '';
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #0369a1;
-  border-right-color: #0369a1;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-left: 1rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Form Styles */
-.profile-form {
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.profile-form fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-}
-
-.profile-form fieldset:disabled {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.profile-form section {
-  margin-bottom: 2.5rem;
-}
-
-.profile-form section:last-of-type {
-  margin-bottom: 2rem;
-}
-
-.profile-form section h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #0369a1;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #ecf0f1;
-}
-
-/* Labels and Form Fields */
-.profile-form label {
-  display: block;
-  margin-bottom: 1.5rem;
-  font-size: 0.9375rem;
-  color: #1f2937;
-  font-weight: 500;
-}
-
-.profile-form label:last-child {
-  margin-bottom: 0;
-}
-
-.profile-form label input,
-.profile-form label textarea,
-.profile-form label select {
-  display: block;
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9375rem;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background: #fff;
-  color: #1f2937;
-  box-sizing: border-box;
-}
-
-.profile-form label input:focus,
-.profile-form label textarea:focus,
-.profile-form label select:focus {
-  outline: none;
-  border-color: #0369a1;
-  box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.1);
-}
-
-.profile-form label input:disabled,
-.profile-form label select:disabled,
-.profile-form label textarea:disabled {
-  background-color: #f3f4f6;
-  color: #6b7280;
-  cursor: not-allowed;
-}
-
-/* Radio Buttons */
-.radio-group {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-  margin-top: 0.75rem;
-}
-
-.radio-group label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0;
-  font-weight: normal;
   gap: 0.5rem;
 }
 
-.radio-group input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: #0369a1;
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #991b1b;
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
+}
+.success-message {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: #15803d;
+  font-size: 0.8125rem;
+  margin-bottom: 1rem;
 }
 
-/* Checkbox */
-.checkbox-label {
+/* ── Form ── */
+.profile-form fieldset { border: none; padding: 0; margin: 0; }
+
+.section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.section h3 {
+  font-size: 0.675rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section label {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.875rem;
+}
+.section label:last-child { margin-bottom: 0; }
+
+.section input[type="text"],
+.section input[type="number"],
+.section input[type="date"],
+.section select {
+  padding: 0.5625rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-family: 'Sora', sans-serif;
+  color: #0d1117;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.section input:focus,
+.section select:focus {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15,23,42,0.07);
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: #10b981;
-}
-
-/* Action Buttons */
-.actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.save-btn,
-.cancel-btn {
-  padding: 0.875rem 2rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.save-btn {
-  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
-  color: #fff;
-  min-width: 150px;
-}
-
-.save-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  box-shadow: 0 4px 12px rgba(3, 105, 161, 0.3);
-}
-
-.save-btn:disabled {
-  background: #cbd5e1;
-  color: #94a3b8;
+fieldset:disabled input,
+fieldset:disabled select {
+  background: #f9fafb;
+  color: #6b7280;
   cursor: not-allowed;
 }
 
-.cancel-btn {
-  background: #e5e7eb;
-  color: #1f2937;
+/* Radio */
+.radio-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.radio-group label {
+  flex-direction: row; align-items: center;
+  gap: 0.375rem; font-weight: 400; color: #374151;
+  cursor: pointer; margin-bottom: 0;
+}
+.radio-group input[type="radio"] { width: auto; accent-color: #0f172a; }
+
+/* Checkbox */
+.checkbox-label { flex-direction: row !important; align-items: center !important; gap: 0.5rem !important; cursor: pointer; }
+.checkbox-label input[type="checkbox"] { width: auto; accent-color: #0f172a; }
+
+/* ── Doctor cards ── */
+.doctor-grid { display: flex; flex-direction: column; gap: 0.625rem; margin-top: 0.25rem; }
+
+.doctor-card {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  background: #fff;
+}
+.doctor-card:hover          { border-color: #94a3b8; background: #f8fafc; }
+.doctor-card.selected       { border-color: #0f172a; background: #f8fafc; box-shadow: 0 0 0 3px rgba(15,23,42,0.07); }
+.doctor-card.disabled       { cursor: not-allowed; opacity: 0.6; }
+.doctor-card-info           { flex: 1; min-width: 0; }
+.doctor-card-name           { font-size: 0.875rem; font-weight: 700; color: #0d1117; }
+.doctor-card-meta           { font-size: 0.75rem; color: #6b7280; display: flex; gap: 0.625rem; flex-wrap: wrap; margin-top: 0.2rem; }
+
+.doctor-card-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid #d1d5db;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s; margin-top: 2px;
+}
+.doctor-card.selected .doctor-card-check {
+  background: #0f172a;
+  border-color: #0f172a;
 }
 
-.cancel-btn:hover {
-  background: #d1d5db;
+/* ── Actions ── */
+.actions { display: flex; justify-content: flex-end; padding-top: 0.5rem; }
+.save-btn {
+  padding: 0.625rem 1.5rem;
+  background: #0f172a; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; font-family: 'Sora', sans-serif;
+  transition: background 0.15s, transform 0.1s;
 }
+.save-btn:hover:not(:disabled) { background: #1e293b; }
+.save-btn:active:not(:disabled) { transform: scale(0.98); }
+.save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .profile-settings {
-    padding: 1rem;
-  }
-
-  .profile-form {
-    padding: 1.5rem;
-  }
-
-  .profile-settings h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .profile-form section h3 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-  }
-
-  .radio-group {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .actions {
-    flex-direction: column;
-  }
-
-  .save-btn,
-  .cancel-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-settings {
-    padding: 0.75rem;
-  }
-
-  .profile-form {
-    padding: 1rem;
-    border-radius: 8px;
-  }
-
-  .profile-settings h2 {
-    font-size: 1.25rem;
-  }
-
-  .profile-form section {
-    margin-bottom: 1.5rem;
-  }
-
-  .profile-form label {
-    font-size: 0.875rem;
-  }
-
-  .profile-form label input,
-  .profile-form label select,
-  .profile-form label textarea {
-    padding: 0.625rem;
-    font-size: 0.875rem;
-  }
-}
+.spinner { text-align: center; padding: 2rem; color: #9ca3af; font-size: 0.875rem; }
+.doctors-loading { font-size: 0.8rem; color: #9ca3af; padding: 0.5rem 0; display: flex; align-items: center; gap: 0.375rem; }

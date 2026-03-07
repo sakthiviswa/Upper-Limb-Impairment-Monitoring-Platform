@@ -6,7 +6,6 @@ Entry point: python app.py
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
 
 from config import config
 from extensions import db, bcrypt, jwt
@@ -24,11 +23,11 @@ def create_app(env: str = None) -> Flask:
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    # ── CORS – allow React dev server ──────────────────────────────────────────
+    # ── CORS – allow React dev server ───────────────────────────────────────────
     origins = app.config["CORS_ORIGINS"].split(",")
     CORS(app, resources={r"/api/*": {"origins": origins}}, supports_credentials=True)
 
-    # ── JWT error handlers ─────────────────────────────────────────────────────
+    # ── JWT error handlers ──────────────────────────────────────────────────────
     @jwt.unauthorized_loader
     def missing_token(reason):
         return jsonify({"message": "Authorization token required", "reason": reason}), 401
@@ -41,20 +40,21 @@ def create_app(env: str = None) -> Flask:
     def invalid_token(reason):
         return jsonify({"message": "Invalid token", "reason": reason}), 422
 
-    # ── Blueprints ─────────────────────────────────────────────────────────────
+    # ── Blueprints ──────────────────────────────────────────────────────────────
     app.register_blueprint(auth_bp)
     app.register_blueprint(user_bp)
 
-    # ── Health check ───────────────────────────────────────────────────────────
+    # ── Health check ────────────────────────────────────────────────────────────
     @app.get("/api/health")
     def health():
         return jsonify({"status": "ok", "env": env}), 200
 
-    # ── Create tables on first run ─────────────────────────────────────────────
+    # ── Create tables on first run ──────────────────────────────────────────────
     with app.app_context():
-        # Import all models so SQLAlchemy registers them before create_all()
+        # ⚠️  Import ALL models here so SQLAlchemy registers them before create_all()
         from models.user import User
-        from models.notification import Notification  # NEW
+        from models.notification import Notification
+        from models.message import Conversation, Message   # NEW
 
         db.create_all()
 
