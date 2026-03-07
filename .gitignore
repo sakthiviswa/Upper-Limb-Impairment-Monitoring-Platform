@@ -1,41 +1,96 @@
 ###############################################################################
-# Core: only track source/config, ignore build & environment artifacts
+
+# Core: track only source & config files
+
 ###############################################################################
 
+# ---------------------------
+
 # Python
-__pycache__/
+
+# ---------------------------
+
+**pycache**/
 *.py[cod]
 *.pyo
 *.pyd
 *.so
 *.egg-info/
+*.egg
+
+# Testing / lint caches
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+coverage/
+
+# ---------------------------
 
 # Virtual environments
+
+# ---------------------------
+
 venv/
 .venv/
 env/
-.env/
+backend/venv/
+backend/.venv/
+backend/env/
 
-# SQLite / local databases
+# ---------------------------
+
+# Databases (local only)
+
+# ---------------------------
+
 *.db
 *.sqlite
 *.sqlite3
+instance/
+
+# ---------------------------
+
+# Generated outputs
+
+# ---------------------------
+
+outputs/
+backend/outputs/
+
+# Generated media/reports
+
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# ---------------------------
 
 # Node / React
+
+# ---------------------------
+
 node_modules/
 dist/
 build/
 .parcel-cache/
 .turbo/
 .next/
-yarn.lock
-pnpm-lock.yaml
-package-lock.json
 
-# Logs & OS cruft
+# Keep package-lock.json for reproducible builds
+
+# yarn.lock
+
+# pnpm-lock.yaml
+
+# ---------------------------
+
+# Logs & OS files
+
+# ---------------------------
+
 *.log
 *.tmp
 *.swp
@@ -43,21 +98,44 @@ package-lock.json
 .DS_Store
 Thumbs.db
 
+# ---------------------------
+
 # Editor / IDE
+
+# ---------------------------
+
 .vscode/
 .idea/
 *.code-workspace
 
+# ---------------------------
+
 # Environment / secrets
+
+# ---------------------------
+
 .env
 .env.*
+.env.local
 
 ###############################################################################
-# Positive patterns: typical project files you *do* commit
-# (These don't force-include; they document what should be in git.)
-#
-# - Source:   *.py, *.js, *.jsx, *.ts, *.tsx, *.css, *.scss, *.html
-# - Config:   *.json, *.yaml, *.yml, *.toml, *.ini, *.cfg
-# - Text:     *.md, *.txt, LICENSE, README*
+
+# Files that SHOULD be committed
+
 ###############################################################################
 
+# backend/
+
+# frontend/
+
+# requirements.txt
+
+# package.json
+
+# package-lock.json
+
+# README.md
+
+# .gitignore
+
+###############################################################################
