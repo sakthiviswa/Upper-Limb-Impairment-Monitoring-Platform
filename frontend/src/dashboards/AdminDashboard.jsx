@@ -4,9 +4,11 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import api from '../utils/api'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import { StatCard, SectionCard, Badge, DataTable } from '../components/ui/Cards'
+import ProfileSettings from '../components/ProfileSettings'
 import {
   Users, UserCheck, Stethoscope, ShieldCheck,
   Activity, Server, AlertTriangle, TrendingUp,
@@ -15,10 +17,17 @@ import {
 const ROLE_VARIANT = { patient: 'info', doctor: 'success', admin: 'warning' }
 
 export default function AdminDashboard() {
+  const location = useLocation()
+  const urlParams = new URLSearchParams(location.search)
+  const initialTab = urlParams.get('tab') || 'overview'
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
-  const [tab, setTab]         = useState('overview')
+  const [tab, setTab]         = useState(initialTab)
+
+  const handleTabChange = (newTab) => {
+    setTab(newTab)
+  }
 
   useEffect(() => {
     api.get('/admin/dashboard')
@@ -29,7 +38,7 @@ export default function AdminDashboard() {
 
   if (loading) return <LoadingScreen />
   if (error) return (
-    <DashboardLayout user={{ name: 'Admin', email: '' }} role="admin" activeTab={tab} onTabChange={setTab}>
+    <DashboardLayout user={{ name: 'Admin', email: '' }} role="admin" activeTab={tab} onTabChange={handleTabChange}>
       <ErrorBanner message={error} />
     </DashboardLayout>
   )
@@ -37,7 +46,7 @@ export default function AdminDashboard() {
   const { stats, recent_users } = data
 
   return (
-    <DashboardLayout user={{ name: 'Administrator' }} role="admin" activeTab={tab} onTabChange={setTab}>
+    <DashboardLayout user={{ name: 'Administrator' }} role="admin" activeTab={tab} onTabChange={handleTabChange}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
         {/* Page header */}
@@ -202,6 +211,16 @@ export default function AdminDashboard() {
             ))}
           </div>
         </SectionCard>
+
+        {/* ── Profile ────────────────────────────────────────────────────────── */}
+        {tab === 'profile' && (
+          <ProfileSettings viewMode={true} />
+        )}
+
+        {/* ── Settings ───────────────────────────────────────────────────────── */}
+        {tab === 'settings' && (
+          <ProfileSettings viewMode={false} />
+        )}
 
       </div>
     </DashboardLayout>

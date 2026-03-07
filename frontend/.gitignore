@@ -22,43 +22,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Python related (backend)
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-.venv/
-env/
-ENV/
-.env
-.env.local
-*.egg-info/
-dist/
-build/
-
-# IDE
-*.code-workspace
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Project outputs
-outputs/
-reports/
-graphs/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Temporary files
-*.tmp
-*.bak
-*~
+*.pye

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import './Navbar.css'
 
 /* ── Role metadata ─────────────────────────────────────────────────────────── */
 const ROLE_META = {
@@ -18,6 +19,7 @@ const NAV_LINKS = {
 
 export default function Navbar() {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const location         = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -125,14 +127,14 @@ export default function Navbar() {
                     <div style={S.dropDivider} />
 
                     {/* Menu items */}
-                    <DropItem icon={<ProfileIcon />} label="My Profile"   />
-                    <DropItem icon={<SettingsIcon />} label="Settings"    />
-                    <DropItem icon={<HelpIcon />}     label="Help & Docs" />
+                    <DropItem icon={<ProfileIcon />} label="View Profile"   onClick={() => { navigate('/profile'); setMenuOpen(false); }} />
+                    <DropItem icon={<SettingsIcon />} label="Settings"    onClick={() => { navigate('/profile/settings'); setMenuOpen(false); }} />
+                    {/* you can re-enable help docs here if needed */}
 
                     <div style={S.dropDivider} />
 
                     {/* Logout */}
-                    <button style={S.logoutBtn} onClick={logout}>
+                    <button className="logoutBtn" style={S.logoutBtn} onClick={logout}>
                       <LogoutIcon />
                       Sign out
                     </button>
@@ -158,6 +160,7 @@ function DropItem({ icon, label, onClick }) {
   const [hover, setHover] = useState(false)
   return (
     <button
+      className="dropItem"
       style={{ ...S.dropItem, ...(hover ? S.dropItemHover : {}) }}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}

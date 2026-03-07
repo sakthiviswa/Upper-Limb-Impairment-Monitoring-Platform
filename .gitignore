@@ -1,71 +1,142 @@
+###############################################################################
+
+# Core: track only source & config files
+
+###############################################################################
+
+# ---------------------------
+
 # Python
-__pycache__/
+
+# ---------------------------
+
+**pycache**/
 *.py[cod]
-*$py.class
+*.pyo
+*.pyd
 *.so
-.Python
+*.egg-info/
+*.egg
+backend\routers\__pycache__
+backend\routes\__pycache__
+# Testing / lint caches
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+
+# ---------------------------
+
+# Virtual environments
+
+# ---------------------------
+
 venv/
 .venv/
 env/
-ENV/
-.env
-.env.local
-*.egg-info/
-dist/
-build/
+backend/venv/
+backend/.venv/
+backend/env/
 
-# Node/Frontend
-node_modules/
-dist/
-dist-ssr/
-*.local
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ---------------------------
 
-# IDE/Editor
-.vscode/
-.idea/
-*.code-workspace
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Databases (local only)
 
-# OS
-.DS_Store
-Thumbs.db
+# ---------------------------
 
-# Project outputs
-backend/outputs/
-backend/instance/
-outputs/
-reports/
-graphs/
-
-# Database
 *.db
 *.sqlite
 *.sqlite3
+instance/
 
-# Temporary files
+# ---------------------------
+
+# Generated outputs
+
+# ---------------------------
+
+outputs/
+backend/outputs/
+
+# Generated media/reports
+
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# ---------------------------
+
+# Node / React
+
+# ---------------------------
+
+node_modules/
+dist/
+build/
+.parcel-cache/
+.turbo/
+.next/
+
+# Keep package-lock.json for reproducible builds
+
+# yarn.lock
+
+# pnpm-lock.yaml
+
+# ---------------------------
+
+# Logs & OS files
+
+# ---------------------------
+
+*.log
 *.tmp
-*.bak
-*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 
-# Models and large files
-*.pth
-*.pt
-*.h5
-*.pkl
-*.pickle
+# ---------------------------
 
-# Cache
-.cache/
-.pytest_cache/
-.coverage
-htmlcov/
+# Editor / IDE
+
+# ---------------------------
+
+.vscode/
+.idea/
+*.code-workspace
+
+# ---------------------------
+
+# Environment / secrets
+
+# ---------------------------
+
+.env
+.env.*
+.env.local
+
+###############################################################################
+
+# Files that SHOULD be committed
+
+###############################################################################
+
+# backend/
+
+# frontend/
+
+# requirements.txt
+
+# package.json
+
+# package-lock.json
+
+# README.md
+
+# .gitignore
+
+###############################################################################
