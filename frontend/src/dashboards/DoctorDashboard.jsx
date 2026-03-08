@@ -1,5 +1,6 @@
 /**
  * DoctorDashboard.jsx — fully theme-aware via CSS variables
+ * Updated: AnalysisAssignment panel wired for report_analysis and exercise_assignment tabs
  */
 
 import { useState, useEffect } from 'react'
@@ -10,6 +11,7 @@ import DashboardLayout from '../components/layout/DashboardLayout'
 import NotificationsPanel from '../components/NotificationsPanel'
 import ProfileSettings from '../components/ProfileSettings'
 import MessagesPanel from '../components/MessagesPanel'
+import AnalysisAssignment from '../components/AnalysisAssignment'
 import { useToast } from '../components/ToastProvider'
 import {
   Users, ClipboardList, Activity, CheckCircle, MessageSquare,
@@ -65,7 +67,9 @@ function StatCard({ label, value, icon: Icon, color }) {
           <Icon size={18} color={color || 'var(--brand)'} strokeWidth={2} />
         </div>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {value}
+          </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{label}</div>
         </div>
       </div>
@@ -183,15 +187,15 @@ export default function DoctorDashboard() {
   const urlParams = new URLSearchParams(location.search)
   const initialTab = urlParams.get('tab') || 'overview'
 
-  const [data, setData]                       = useState(null)
-  const [loading, setLoading]                 = useState(true)
-  const [error, setError]                     = useState('')
-  const [tab, setTab]                         = useState(initialTab)
-  const [unreadCount, setUnreadCount]         = useState(0)
-  const [unreadMessages, setUnreadMessages]   = useState(0)
-  const [pendingPatients, setPendingPatients] = useState([])
+  const [data, setData]                         = useState(null)
+  const [loading, setLoading]                   = useState(true)
+  const [error, setError]                       = useState('')
+  const [tab, setTab]                           = useState(initialTab)
+  const [unreadCount, setUnreadCount]           = useState(0)
+  const [unreadMessages, setUnreadMessages]     = useState(0)
+  const [pendingPatients, setPendingPatients]   = useState([])
   const [acceptedPatients, setAcceptedPatients] = useState([])
-  const [acting, setActing]                   = useState({})
+  const [acting, setActing]                     = useState({})
 
   useEffect(() => {
     api.get('/doctor/dashboard')
@@ -201,7 +205,11 @@ export default function DoctorDashboard() {
         const um = r.data.data.unread_messages || 0
         setUnreadCount(un)
         setUnreadMessages(um)
-        if (un > 0) showToast({ type: 'doctor_request', title: `${un} New Notification${un > 1 ? 's' : ''}`, message: 'You have unread patient requests and alerts.', actions: [{ label: 'View', variant: 'primary', onClick: () => setTab('notifications') }] })
+        if (un > 0) showToast({
+          type: 'doctor_request', title: `${un} New Notification${un > 1 ? 's' : ''}`,
+          message: 'You have unread patient requests and alerts.',
+          actions: [{ label: 'View', variant: 'primary', onClick: () => setTab('notifications') }],
+        })
       })
       .catch(() => setError('Failed to load dashboard data.'))
       .finally(() => setLoading(false))
@@ -219,7 +227,11 @@ export default function DoctorDashboard() {
       await api.post(`/doctor/accept-patient/${patient.id}`)
       setPendingPatients(p => p.filter(x => x.id !== patient.id))
       api.get('/doctor/accepted-patients').then(r => setAcceptedPatients(r.data.patients || []))
-      showToast({ type: 'request_accepted', title: 'Patient Accepted', message: `${patient.name} is now your assigned patient.`, actions: [{ label: 'Message', variant: 'primary', onClick: () => setTab('messages') }] })
+      showToast({
+        type: 'request_accepted', title: 'Patient Accepted',
+        message: `${patient.name} is now your assigned patient.`,
+        actions: [{ label: 'Message', variant: 'primary', onClick: () => setTab('messages') }],
+      })
     } catch (e) {
       showToast({ type: 'error', title: 'Error', message: e.response?.data?.message || 'Failed to accept patient.' })
     } finally { setActing(p => ({ ...p, [patient.id]: null })) }
@@ -336,7 +348,6 @@ export default function DoctorDashboard() {
               </div>
             </div>
 
-            {/* Patient monitoring table */}
             <Card noPad>
               <SectionHeader
                 title="Patient Monitoring Summary"
@@ -444,11 +455,14 @@ export default function DoctorDashboard() {
           </>
         )}
 
-        {tab === 'profile'  && <ProfileSettings viewMode={true} />}
-        {tab === 'settings' && <ProfileSettings viewMode={false} />}
+        {/* ── ANALYSIS & ASSIGNMENT (both sub-tabs) ── */}
+        {(tab === 'report_analysis' || tab === 'exercise_assignment') && (
+          <AnalysisAssignment subTab={tab} />
+        )}
 
-        {/* ── MY PROFILE (doctor detail) ── */}
-        {tab === 'myprofile' && <DoctorProfileCard user={user} />}
+        {tab === 'profile'    && <ProfileSettings viewMode={true} />}
+        {tab === 'settings'   && <ProfileSettings viewMode={false} />}
+        {tab === 'myprofile'  && <DoctorProfileCard user={user} />}
       </div>
     </DashboardLayout>
   )
@@ -458,9 +472,9 @@ export default function DoctorDashboard() {
 function PatientCard({ patient, onMessage }) {
   const initials = (patient.name || '').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
   const sev = patient.injurySeverity
-  const sevColor = sev === 'Severe' ? { bg:'var(--danger-bg)',  border:'var(--danger-border)',  color:'var(--danger)'  }
-    : sev === 'Moderate'            ? { bg:'var(--warning-bg)', border:'var(--warning-border)', color:'var(--warning)' }
-    :                                  { bg:'var(--success-bg)', border:'var(--success-border)', color:'var(--success)' }
+  const sevColor = sev === 'Severe'   ? { bg:'var(--danger-bg)',  border:'var(--danger-border)',  color:'var(--danger)'  }
+    : sev === 'Moderate'              ? { bg:'var(--warning-bg)', border:'var(--warning-border)', color:'var(--warning)' }
+    :                                   { bg:'var(--success-bg)', border:'var(--success-border)', color:'var(--success)' }
 
   return (
     <Card>
@@ -493,7 +507,7 @@ function PatientCard({ patient, onMessage }) {
   )
 }
 
-/* ── Doctor Profile Card ──────────────────────────────────────────── */
+/* ── Doctor Profile Card ─────────────────────────────────────────── */
 function DoctorProfileCard({ user }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -545,9 +559,7 @@ function InfoSection({ title, icon: Icon, children }) {
         <Icon size={13} color="var(--text-muted)" strokeWidth={2} />
         <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>{title}</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {children}
-      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </Card>
   )
 }
@@ -573,7 +585,9 @@ function HeaderBtn({ children, onClick, badge }) {
     }}>
       {children}
       {badge > 0 && (
-        <span style={{ background: '#dc2626', color: '#fff', borderRadius: 10, padding: '0.05rem 0.35rem', fontSize: '0.6rem', fontWeight: 700 }}>{badge}</span>
+        <span style={{ background: '#dc2626', color: '#fff', borderRadius: 10, padding: '0.05rem 0.35rem', fontSize: '0.6rem', fontWeight: 700 }}>
+          {badge}
+        </span>
       )}
     </button>
   )

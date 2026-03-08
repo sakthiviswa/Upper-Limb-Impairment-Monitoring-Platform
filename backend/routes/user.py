@@ -1,22 +1,29 @@
 """
 User / Dashboard & Profile routes.
 
-GET  /api/user/profile                        – get user profile
-PUT  /api/user/profile                        – update profile + notify SELECTED doctor
-GET  /api/patient/dashboard                   – patient overview
-GET  /api/doctor/dashboard                    – doctor overview
-GET  /api/notifications                       – get notifications for current user
-POST /api/notifications/<id>/read             – mark notification as read
-POST /api/notifications/read-all              – mark all notifications as read
-POST /api/doctor/accept-patient/<patient_id>  – doctor accepts a patient + creates conversation
-POST /api/doctor/decline-patient/<patient_id> – doctor declines a patient
-GET  /api/doctor/pending-patients             – patients who selected this doctor
-GET  /api/doctor/accepted-patients            – patients accepted by this doctor
-GET  /api/doctors                             – list all doctors (for patient profile selection)
-GET  /api/messages/conversations              – list conversations for current user
-GET  /api/messages/conversation/<id>          – get messages in a conversation
-POST /api/messages/send                       – send a message
-POST /api/messages/conversation/<id>/read     – mark conversation messages as read
+GET  /api/user/profile                              – get user profile
+PUT  /api/user/profile                              – update profile + notify SELECTED doctor
+GET  /api/patient/dashboard                         – patient overview
+GET  /api/doctor/dashboard                          – doctor overview
+GET  /api/notifications                             – get notifications for current user
+POST /api/notifications/<id>/read                   – mark notification as read
+POST /api/notifications/read-all                    – mark all notifications as read
+POST /api/doctor/accept-patient/<patient_id>        – doctor accepts a patient
+POST /api/doctor/decline-patient/<patient_id>       – doctor declines a patient
+GET  /api/doctor/pending-patients                   – patients who selected this doctor
+GET  /api/doctor/accepted-patients                  – patients accepted by this doctor
+GET  /api/doctors                                   – list all doctors
+GET  /api/messages/conversations                    – list conversations for current user
+GET  /api/messages/conversation/<id>                – get messages in a conversation
+POST /api/messages/send                             – send a message
+POST /api/messages/conversation/<id>/read           – mark conversation messages as read
+
+NEW:
+POST /api/patient/send-session-report               – patient sends session report to doctor
+GET  /api/patient/my-exercises                      – patient views assigned exercises
+GET  /api/doctor/patient-sessions/<patient_id>      – doctor views patient's rehab sessions
+POST /api/doctor/session-note/<session_id>          – doctor saves analysis note on session
+POST /api/doctor/assign-exercises                   – doctor assigns exercises to patient
 
 Requires JWT.
 """
@@ -29,11 +36,19 @@ from extensions import db
 from models.user import User
 from models.notification import Notification
 from models.message import Conversation, Message
+from models.exercise_assignment import ExerciseAssignment
+
+# Rehab DB — separate SQLAlchemy engine/session
+# SessionLocal is the session factory from your rehab database module.
+# Adjust this import if your SessionLocal lives in a different file.
+from database import SessionLocal
+from models.models import RehabSession, Patient as RehabPatient
 
 user_bp = Blueprint("user", __name__, url_prefix="/api")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 def _send_notification(recipient_id: int, sender_id: int, notif_type: str, message: str):
     n = Notification(
         recipient_id=recipient_id,
@@ -45,7 +60,6 @@ def _send_notification(recipient_id: int, sender_id: int, notif_type: str, messa
 
 
 def _get_or_create_conversation(user1_id: int, user2_id: int) -> Conversation:
-    """Return existing conversation or create a new one."""
     conv = Conversation.query.filter(
         db.or_(
             db.and_(Conversation.user1_id == user1_id, Conversation.user2_id == user2_id),
@@ -56,6 +70,11 @@ def _get_or_create_conversation(user1_id: int, user2_id: int) -> Conversation:
         conv = Conversation(user1_id=user1_id, user2_id=user2_id)
         db.session.add(conv)
     return conv
+
+
+def _get_rehab_patient_by_email(rehab_db, email: str):
+    """Look up a RehabPatient by the Flask User's email."""
+    return rehab_db.query(RehabPatient).filter_by(email=email).first()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -108,7 +127,6 @@ def update_profile():
     if not data:
         return jsonify({"message": "No JSON body provided"}), 400
 
-    # ── Core personal fields ──────────────────────────────────────────────────
     if "fullName" in data:
         user.name = (data["fullName"] or "").strip()
     if "age" in data:
@@ -120,7 +138,6 @@ def update_profile():
 
     notified_doctor = False
 
-    # ── Patient-only fields ───────────────────────────────────────────────────
     if user.role == "patient":
         if "injuredArm" in data:
             user.injured_arm = data["injuredArm"]
@@ -137,17 +154,13 @@ def update_profile():
         if "reminderEnabled" in data:
             user.reminder_enabled = data.get("reminderEnabled", False)
 
-        # ── Doctor selection: notify ONLY the chosen doctor ───────────────────
         new_doctor_id = data.get("selectedDoctorId")
         if new_doctor_id:
             new_doctor_id = int(new_doctor_id)
-            # Only notify if doctor changed AND patient not already accepted
             if user.selected_doctor_id != new_doctor_id and not user.doctor_accepted:
                 user.selected_doctor_id = new_doctor_id
-
                 doctor = User.query.filter_by(id=new_doctor_id, role="doctor").first()
                 if doctor:
-                    # Remove any old un-read request to a different doctor
                     old_requests = Notification.query.filter_by(
                         sender_id=user.id,
                         type="doctor_request",
@@ -183,7 +196,7 @@ def update_profile():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DOCTORS LIST  (for patient profile doctor-selector)
+# DOCTORS LIST
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.get("/doctors")
@@ -226,7 +239,6 @@ def get_notifications():
         sender = User.query.get(n.sender_id)
         d["senderName"]  = sender.name  if sender else "Unknown"
         d["senderEmail"] = sender.email if sender else ""
-        # Attach patient details for doctor_request notifications
         if n.type == "doctor_request":
             patient = User.query.get(n.sender_id)
             if patient:
@@ -279,12 +291,10 @@ def accept_patient(patient_id):
     if not patient:
         return jsonify({"message": "Patient not found"}), 404
 
-    # Update patient record
     patient.assigned_doctor_id = doctor.id
     patient.doctor_accepted    = True
     patient.doctor_name        = doctor.name
 
-    # Notify patient
     _send_notification(
         recipient_id=patient.id,
         sender_id=doctor.id,
@@ -295,7 +305,6 @@ def accept_patient(patient_id):
         ),
     )
 
-    # Mark the original doctor_request notification as read
     Notification.query.filter_by(
         recipient_id=doctor_id,
         sender_id=patient_id,
@@ -303,7 +312,6 @@ def accept_patient(patient_id):
         is_read=False,
     ).update({"is_read": True})
 
-    # Auto-create a conversation so they can chat immediately
     _get_or_create_conversation(doctor.id, patient.id)
 
     try:
@@ -330,10 +338,8 @@ def decline_patient(patient_id):
     if not patient:
         return jsonify({"message": "Patient not found"}), 404
 
-    # Reset patient's selected doctor so they can pick another
     patient.selected_doctor_id = None
 
-    # Notify patient
     _send_notification(
         recipient_id=patient.id,
         sender_id=doctor.id,
@@ -344,7 +350,6 @@ def decline_patient(patient_id):
         ),
     )
 
-    # Mark the request notification as read
     Notification.query.filter_by(
         recipient_id=doctor_id,
         sender_id=patient_id,
@@ -364,7 +369,6 @@ def decline_patient(patient_id):
 @user_bp.get("/doctor/pending-patients")
 @jwt_required()
 def pending_patients():
-    """Patients who specifically selected this doctor and are waiting for acceptance."""
     doctor_id = get_jwt_identity()
     doctor = User.query.get(doctor_id)
     if not doctor or doctor.role not in ("doctor", "admin"):
@@ -381,7 +385,6 @@ def pending_patients():
 @user_bp.get("/doctor/accepted-patients")
 @jwt_required()
 def accepted_patients():
-    """Patients this doctor has accepted."""
     doctor_id = get_jwt_identity()
     doctor = User.query.get(doctor_id)
     if not doctor or doctor.role not in ("doctor", "admin"):
@@ -395,7 +398,6 @@ def accepted_patients():
     return jsonify({"patients": [p.to_dict() for p in patients]}), 200
 
 
-# Keep old route alias for compatibility
 @user_bp.get("/doctor/my-patients")
 @jwt_required()
 def my_patients():
@@ -533,7 +535,6 @@ def patient_dashboard():
         recipient_id=user_id, is_read=False
     ).count()
 
-    # Count unread messages
     user_convs = Conversation.query.filter(
         db.or_(
             Conversation.user1_id == int(user_id),
@@ -546,17 +547,24 @@ def patient_dashboard():
         for c in user_convs
     )
 
+    # Resolve assigned doctor email for SendReportButton
+    assigned_doctor_email = None
+    if user.assigned_doctor_id:
+        doctor = User.query.get(user.assigned_doctor_id)
+        assigned_doctor_email = doctor.email if doctor else None
+
     data = {
         "appointments": [
             {"id": 1, "doctor": "Dr. Smith", "date": "2025-03-15", "status": "Confirmed"},
             {"id": 2, "doctor": "Dr. Jones", "date": "2025-03-22", "status": "Pending"},
         ],
-        "prescriptions":        2,
-        "health_score":         85,
-        "unread_notifications": unread_notif,
-        "unread_messages":      unread_msgs,
-        "doctor_accepted":      user.doctor_accepted,
-        "assigned_doctor":      user.doctor_name,
+        "prescriptions":          2,
+        "health_score":           85,
+        "unread_notifications":   unread_notif,
+        "unread_messages":        unread_msgs,
+        "doctor_accepted":        user.doctor_accepted,
+        "assigned_doctor":        user.doctor_name,
+        "assigned_doctor_email":  assigned_doctor_email,   # ← NEW: used by SendReportButton
     }
     return jsonify({"data": data}), 200
 
@@ -587,7 +595,6 @@ def doctor_dashboard():
         recipient_id=user_id, is_read=False
     ).count()
 
-    # Count unread messages
     user_convs = Conversation.query.filter(
         db.or_(
             Conversation.user1_id == int(user_id),
@@ -640,3 +647,266 @@ def admin_dashboard():
         "recent_users": [u.to_dict() for u in recent_users],
     }
     return jsonify({"data": data}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — PATIENT: Send session report to doctor
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.post("/patient/send-session-report")
+@jwt_required()
+def send_session_report():
+    """
+    Patient clicks "Send to Doctor" from SessionHistory.
+    Looks up the rehab session, verifies ownership, notifies the doctor.
+    """
+    user_id = int(get_jwt_identity())
+    patient = User.query.get(user_id)
+    if not patient or patient.role != "patient":
+        return jsonify({"message": "Forbidden"}), 403
+
+    data       = request.get_json() or {}
+    session_id = data.get("session_id")
+
+    if not session_id:
+        return jsonify({"message": "session_id is required"}), 400
+
+    if not patient.assigned_doctor_id:
+        return jsonify({"message": "You have no assigned doctor yet"}), 400
+
+    # Look up session in the rehab DB
+    rehab_db = SessionLocal()
+    try:
+        rehab_patient = _get_rehab_patient_by_email(rehab_db, patient.email)
+        if not rehab_patient:
+            return jsonify({"message": "Rehab profile not found"}), 404
+
+        rehab_session = rehab_db.query(RehabSession).filter_by(
+            id=session_id,
+            patient_id=rehab_patient.id,
+        ).first()
+        if not rehab_session:
+            return jsonify({"message": "Session not found or does not belong to you"}), 404
+
+        session_data = rehab_session.to_dict()
+    finally:
+        rehab_db.close()
+
+    doctor = User.query.get(patient.assigned_doctor_id)
+    if not doctor:
+        return jsonify({"message": "Assigned doctor not found"}), 404
+
+    _send_notification(
+        recipient_id=doctor.id,
+        sender_id=patient.id,
+        notif_type="report_ready",
+        message=(
+            f"{patient.name} has sent Session #{session_id} for your review. "
+            f"Avg angle: {session_data['avg_angle']}°, "
+            f"Status: {session_data['injury_status']}."
+        ),
+    )
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+
+    return jsonify({"message": "Report sent to your doctor successfully"}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — PATIENT: View assigned exercises
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.get("/patient/my-exercises")
+@jwt_required()
+def get_my_exercises():
+    """Patient views exercises assigned by their doctor."""
+    user_id = int(get_jwt_identity())
+    patient = User.query.get(user_id)
+    if not patient or patient.role != "patient":
+        return jsonify({"message": "Forbidden"}), 403
+
+    assignments = (
+        ExerciseAssignment.query
+        .filter_by(patient_id=user_id)
+        .order_by(ExerciseAssignment.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    return jsonify({"assignments": [a.to_dict() for a in assignments]}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — DOCTOR: Get a patient's rehab sessions (Report Analysis panel)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.get("/doctor/patient-sessions/<int:patient_id>")
+@jwt_required()
+def get_patient_sessions(patient_id):
+    """
+    Doctor selects a patient in the Report Analysis sub-tab.
+    Returns all their rehab sessions from the rehab DB.
+    """
+    doctor_id = int(get_jwt_identity())
+    doctor = User.query.get(doctor_id)
+    if not doctor or doctor.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    # Security: confirm this patient is assigned to this doctor
+    patient = User.query.filter_by(
+        id=patient_id,
+        role="patient",
+        assigned_doctor_id=doctor_id,
+        doctor_accepted=True,
+    ).first()
+    if not patient:
+        return jsonify({"message": "Patient not assigned to you"}), 403
+
+    rehab_db = SessionLocal()
+    try:
+        rehab_patient = _get_rehab_patient_by_email(rehab_db, patient.email)
+        if not rehab_patient:
+            return jsonify({"sessions": []}), 200
+
+        sessions = (
+            rehab_db.query(RehabSession)
+            .filter_by(patient_id=rehab_patient.id)
+            .order_by(RehabSession.created_at.desc())
+            .all()
+        )
+        sessions_data = [s.to_dict() for s in sessions]
+    finally:
+        rehab_db.close()
+
+    return jsonify({"sessions": sessions_data}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — DOCTOR: Save analysis note on a session
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.post("/doctor/session-note/<int:session_id>")
+@jwt_required()
+def save_session_note(session_id):
+    """
+    Doctor writes a clinical note on a specific rehab session.
+    Writes to RehabSession.doctor_notes (existing field).
+    """
+    doctor_id = int(get_jwt_identity())
+    doctor = User.query.get(doctor_id)
+    if not doctor or doctor.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    data       = request.get_json() or {}
+    patient_id = data.get("patient_id")
+    note       = (data.get("note") or "").strip()
+
+    if not patient_id:
+        return jsonify({"message": "patient_id is required"}), 400
+
+    # Security: confirm patient is assigned to this doctor
+    patient = User.query.filter_by(
+        id=patient_id,
+        role="patient",
+        assigned_doctor_id=doctor_id,
+        doctor_accepted=True,
+    ).first()
+    if not patient:
+        return jsonify({"message": "Patient not assigned to you"}), 403
+
+    rehab_db = SessionLocal()
+    try:
+        rehab_patient = _get_rehab_patient_by_email(rehab_db, patient.email)
+        if not rehab_patient:
+            return jsonify({"message": "Rehab patient record not found"}), 404
+
+        rehab_session = rehab_db.query(RehabSession).filter_by(
+            id=session_id,
+            patient_id=rehab_patient.id,
+        ).first()
+        if not rehab_session:
+            return jsonify({"message": "Session not found or does not belong to this patient"}), 404
+
+        rehab_session.doctor_notes = note
+        rehab_db.commit()
+    except Exception as e:
+        rehab_db.rollback()
+        return jsonify({"message": f"Error saving note: {str(e)}"}), 500
+    finally:
+        rehab_db.close()
+
+    return jsonify({"message": "Note saved successfully"}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — DOCTOR: Assign exercises to a patient
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.post("/doctor/assign-exercises")
+@jwt_required()
+def assign_exercises():
+    """
+    Doctor prescribes exercises to an accepted patient.
+    Stores assignment and notifies the patient.
+    """
+    doctor_id = int(get_jwt_identity())
+    doctor = User.query.get(doctor_id)
+    if not doctor or doctor.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    data        = request.get_json() or {}
+    patient_id  = data.get("patient_id")
+    exercises   = data.get("exercises", [])
+    doctor_note = (data.get("doctor_note") or "").strip()
+
+    if not patient_id:
+        return jsonify({"message": "patient_id is required"}), 400
+    if not exercises:
+        return jsonify({"message": "At least one exercise is required"}), 400
+
+    # Security: confirm patient is assigned to this doctor
+    patient = User.query.filter_by(
+        id=patient_id,
+        role="patient",
+        assigned_doctor_id=doctor_id,
+        doctor_accepted=True,
+    ).first()
+    if not patient:
+        return jsonify({"message": "Patient not assigned to you"}), 403
+
+    assignment = ExerciseAssignment(
+        doctor_id=doctor_id,
+        patient_id=patient_id,
+        exercises=exercises,
+        doctor_note=doctor_note,
+    )
+    db.session.add(assignment)
+
+    # Build a readable exercise name list for the notification
+    ex_names = ", ".join(e.get("name", "exercise") for e in exercises[:3])
+    suffix   = f" and {len(exercises) - 3} more" if len(exercises) > 3 else ""
+
+    _send_notification(
+        recipient_id=patient_id,
+        sender_id=doctor_id,
+        notif_type="exercise_assigned",
+        message=(
+            f"Dr. {doctor.name} has assigned you {len(exercises)} exercise(s): "
+            f"{ex_names}{suffix}. Check your exercise plan."
+        ),
+    )
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+
+    return jsonify({
+        "message":       "Exercises assigned successfully",
+        "assignment_id": assignment.id,
+        "count":         len(exercises),
+    }), 201
