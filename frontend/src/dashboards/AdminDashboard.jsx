@@ -1,227 +1,327 @@
 /**
- * AdminDashboard — Redesigned UI
- * Same functionality (Flask /admin/dashboard), new professional layout.
+ * AdminDashboard.jsx — fully theme-aware via CSS variables
  */
 
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import DashboardLayout from '../components/layout/DashboardLayout'
-import { StatCard, SectionCard, Badge, DataTable } from '../components/ui/Cards'
 import ProfileSettings from '../components/ProfileSettings'
+import { useToast } from '../components/ToastProvider'
 import {
-  Users, UserCheck, Stethoscope, ShieldCheck,
-  Activity, Server, AlertTriangle, TrendingUp,
+  Users, Activity, Shield, BarChart2,
+  AlertCircle, TrendingUp, CheckCircle,
+  User, Mail, Calendar, Clock, Server,
+  Database, Cpu, HardDrive,
 } from 'lucide-react'
 
-const ROLE_VARIANT = { patient: 'info', doctor: 'success', admin: 'warning' }
+/* ── Atoms ─────────────────────────────────────────────────────────── */
+
+function Card({ children, style = {}, noPad }) {
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 12, boxShadow: 'var(--shadow-sm)',
+      padding: noPad ? 0 : '1.25rem', overflow: 'hidden', ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function StatCard({ label, value, icon: Icon, color, trend }) {
+  return (
+    <Card>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 10,
+          background: color ? `${color}15` : 'var(--brand-light)',
+          border: `1px solid ${color ? `${color}30` : 'var(--brand-border)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={17} color={color || 'var(--brand)'} strokeWidth={2} />
+        </div>
+        {trend != null && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: trend >= 0 ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <TrendingUp size={12} strokeWidth={2.5} style={{ transform: trend < 0 ? 'scaleY(-1)' : 'none' }} />
+            {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 5, fontWeight: 500 }}>{label}</div>
+    </Card>
+  )
+}
+
+function SectionHeader({ title, subtitle, action }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-light)' }}>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{subtitle}</div>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+function Table({ columns, rows }) {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr>
+            {columns.map(c => (
+              <th key={c} style={{ padding: '10px 20px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)', whiteSpace: 'nowrap' }}>
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              {row.map((cell, j) => (
+                <td key={j} style={{ padding: '12px 20px', color: 'var(--text-secondary)' }}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function Badge({ label, variant = 'default' }) {
+  const map = {
+    success: { color: 'var(--success)', bg: 'var(--success-bg)', border: 'var(--success-border)' },
+    info:    { color: 'var(--brand)',   bg: 'var(--brand-light)', border: 'var(--brand-border)'  },
+    warning: { color: 'var(--warning)', bg: 'var(--warning-bg)', border: 'var(--warning-border)' },
+    danger:  { color: 'var(--danger)',  bg: 'var(--danger-bg)',  border: 'var(--danger-border)'  },
+    default: { color: 'var(--text-secondary)', bg: 'var(--bg-card2)', border: 'var(--border)' },
+  }
+  const s = map[variant] || map.default
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 600, color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
+      {label}
+    </span>
+  )
+}
+
+function MetricBar({ label, value, max, color }) {
+  const pct = Math.min(100, Math.round((value / max) * 100))
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+      </div>
+      <div style={{ height: 5, background: 'var(--border)', borderRadius: 99 }}>
+        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 99, background: color || 'var(--brand)', transition: 'width 0.4s' }} />
+      </div>
+    </div>
+  )
+}
+
+/* ── Main ─────────────────────────────────────────────────────────── */
 
 export default function AdminDashboard() {
-  const location = useLocation()
-  const urlParams = new URLSearchParams(location.search)
-  const initialTab = urlParams.get('tab') || 'overview'
-  const [data, setData]       = useState(null)
+  const { user } = useAuth()
+  const { showToast } = useToast()
+  const [tab, setTab]     = useState('overview')
+  const [data, setData]   = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState('')
-  const [tab, setTab]         = useState(initialTab)
-
-  const handleTabChange = (newTab) => {
-    setTab(newTab)
-  }
+  const [error, setError] = useState('')
 
   useEffect(() => {
     api.get('/admin/dashboard')
       .then(r => setData(r.data.data))
-      .catch(() => setError('Failed to load dashboard data.'))
+      .catch(() => setError('Failed to load admin dashboard.'))
       .finally(() => setLoading(false))
   }, [])
 
   if (loading) return <LoadingScreen />
+
   if (error) return (
-    <DashboardLayout user={{ name: 'Admin', email: '' }} role="admin" activeTab={tab} onTabChange={handleTabChange}>
-      <ErrorBanner message={error} />
+    <DashboardLayout user={user} role="admin" activeTab={tab} onTabChange={setTab}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, padding: '12px 16px', color: 'var(--danger)', fontSize: 13 }}>
+        <AlertCircle size={15} strokeWidth={2} /> {error}
+      </div>
     </DashboardLayout>
   )
 
-  const { stats, recent_users } = data
+  const fallback = data || { totalUsers: 0, doctors: 0, patients: 0, activeSessions: 0, recentUsers: [], systemAlerts: [] }
 
   return (
-    <DashboardLayout user={{ name: 'Administrator' }} role="admin" activeTab={tab} onTabChange={handleTabChange}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <DashboardLayout user={user} role="admin" activeTab={tab} onTabChange={setTab}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, fontFamily: "'Sora', sans-serif" }}>
 
-        {/* Page header */}
-        <div>
-          <h1 style={{ fontSize: '1.1875rem', fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.015em' }}>
-            Admin Control Panel
-          </h1>
-          <p style={{ fontSize: '0.8125rem', color: '#6b7280', margin: '0.25rem 0 0' }}>
-            System-wide overview, user management, and platform analytics
-          </p>
-        </div>
+        {/* ── OVERVIEW ── */}
+        {tab === 'overview' && (
+          <>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Admin Console</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
 
-        {/* Stats — 4 columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.875rem' }}>
-          <StatCard label="Total Users"  value={stats.total_users} icon={Users}        trend={12} />
-          <StatCard label="Patients"     value={stats.patients}    icon={UserCheck}     trend={8}  />
-          <StatCard label="Doctors"      value={stats.doctors}     icon={Stethoscope}              />
-          <StatCard label="Admins"       value={stats.admins}      icon={ShieldCheck}              />
-        </div>
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+              <StatCard label="Total Users"      value={fallback.totalUsers}      icon={Users}    color="#3b82f6" trend={12} />
+              <StatCard label="Doctors"          value={fallback.doctors}         icon={Activity} color="#10b981" trend={5}  />
+              <StatCard label="Patients"         value={fallback.patients}        icon={User}     color="#8b5cf6" trend={18} />
+              <StatCard label="Active Sessions"  value={fallback.activeSessions}  icon={Server}   color="#f59e0b" trend={-3} />
+            </div>
 
-        {/* Two-column */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0.875rem' }}>
-
-          {/* Recent users table */}
-          <SectionCard
-            title="Recently Registered Users"
-            subtitle={`${recent_users.length} newest registrations`}
-            action={
-              <button style={{
-                fontSize: '0.75rem', fontWeight: 600, color: '#374151',
-                background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6,
-                padding: '0.375rem 0.75rem', cursor: 'pointer', fontFamily: 'inherit',
-              }}>
-                Manage Users
-              </button>
-            }
-            noPad
-          >
-            <DataTable
-              columns={['ID', 'Name', 'Email', 'Role', 'Joined']}
-              rows={recent_users.map(u => [
-                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
-                  #{u.id}
-                </span>,
-                <span style={{ fontWeight: 500, color: '#0f172a' }}>{u.name}</span>,
-                <span style={{ color: '#6b7280', fontSize: '0.775rem' }}>{u.email}</span>,
-                <Badge label={u.role} variant={ROLE_VARIANT[u.role] || 'default'} />,
-                <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                  {new Date(u.created_at).toLocaleDateString()}
-                </span>,
-              ])}
-            />
-          </SectionCard>
-
-          {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-
-            {/* System health */}
-            <SectionCard title="System Health" subtitle="Live service status">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  { service: 'Flask Auth API',    status: 'Operational', ok: true },
-                  { service: 'FastAPI Rehab API', status: 'Operational', ok: true },
-                  { service: 'Database',          status: 'Operational', ok: true },
-                  { service: 'MediaPipe Engine',  status: 'Degraded',    ok: false },
-                ].map((row, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '0.5rem 0.625rem', background: '#f9fafb',
-                    border: '1px solid #e5e7eb', borderRadius: 6,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: row.ok ? '#10b981' : '#f59e0b', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.775rem', color: '#374151' }}>{row.service}</span>
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: row.ok ? '#059669' : '#d97706', fontWeight: 600 }}>
-                      {row.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-
-            {/* Platform usage */}
-            <SectionCard title="Platform Usage" subtitle="Sessions this week">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {[
-                  { label: 'Rehab sessions completed', value: 142, max: 200 },
-                  { label: 'Appointments scheduled',   value: 89,  max: 150 },
-                  { label: 'Reports generated',        value: 63,  max: 100 },
-                ].map((item, i) => {
-                  const pct = Math.round((item.value / item.max) * 100)
-                  return (
-                    <div key={i}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: '0.75rem', color: '#374151' }}>{item.label}</span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{item.value}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
+              {/* Recent users table */}
+              <Card noPad>
+                <SectionHeader title="Recent Users" subtitle={`${fallback.recentUsers.length} recently joined`} />
+                <Table
+                  columns={['Name', 'Email', 'Role', 'Joined', 'Status']}
+                  rows={(fallback.recentUsers || []).map(u => [
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--bg-card)', flexShrink: 0 }}>
+                        {(u.name || '').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() || '?'}
                       </div>
-                      <div style={{ height: 4, background: '#f3f4f6', borderRadius: 2 }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: '#0f172a', borderRadius: 2, transition: 'width 0.4s' }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </SectionCard>
+                      {u.name}
+                    </span>,
+                    <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{u.email}</span>,
+                    <Badge label={u.role} variant={u.role === 'doctor' ? 'info' : u.role === 'patient' ? 'success' : 'warning'} />,
+                    <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</span>,
+                    <Badge label="Active" variant="success" />,
+                  ])}
+                />
+              </Card>
 
-            {/* Alerts */}
-            <SectionCard title="System Alerts">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  { text: 'MediaPipe latency above threshold', severity: 'warning' },
-                  { text: '3 users pending role assignment',   severity: 'info'    },
-                ].map((alert, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                    padding: '0.625rem 0.75rem',
-                    background: alert.severity === 'warning' ? '#fffbeb' : '#eff6ff',
-                    border: `1px solid ${alert.severity === 'warning' ? '#fde68a' : '#bfdbfe'}`,
-                    borderRadius: 7,
-                  }}>
-                    <AlertTriangle size={13} color={alert.severity === 'warning' ? '#d97706' : '#2563eb'} strokeWidth={2} style={{ marginTop: 1, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.775rem', color: '#374151', lineHeight: 1.4 }}>{alert.text}</span>
+              {/* Right panel */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* System health */}
+                <Card>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>System Health</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <MetricBar label="CPU Usage"     value={34} max={100} color="var(--brand)"   />
+                    <MetricBar label="Memory"        value={58} max={100} color="var(--success)"  />
+                    <MetricBar label="Storage"       value={72} max={100} color="var(--warning)"  />
+                    <MetricBar label="DB Connections" value={28} max={100} color="#8b5cf6"        />
                   </div>
-                ))}
+                  <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--success)' }}>
+                    <CheckCircle size={12} strokeWidth={2.5} /> All systems operational
+                  </div>
+                </Card>
+
+                {/* Quick stats */}
+                <Card>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Platform Summary</div>
+                  {[
+                    { label: 'Rehab Sessions Today', value: '24',     icon: Activity  },
+                    { label: 'Pending Approvals',     value: '7',      icon: Clock     },
+                    { label: 'Avg Session Duration',  value: '28 min', icon: Calendar  },
+                    { label: 'Uptime',                value: '99.9%',  icon: Server    },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--border-light)' : 'none' }}>
+                      <item.icon size={13} color="var(--text-muted)" strokeWidth={2} />
+                      <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>{item.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{item.value}</span>
+                    </div>
+                  ))}
+                </Card>
               </div>
-            </SectionCard>
+            </div>
 
-          </div>
-        </div>
-
-        {/* Role management overview */}
-        <SectionCard
-          title="Role Management"
-          subtitle="User distribution across roles"
-          action={
-            <button style={{
-              fontSize: '0.75rem', fontWeight: 600, color: '#374151',
-              background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6,
-              padding: '0.375rem 0.75rem', cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-              Manage Roles
-            </button>
-          }
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem' }}>
-            {[
-              { role: 'Patients',  count: stats.patients, pct: Math.round((stats.patients / stats.total_users) * 100), color: '#3b82f6' },
-              { role: 'Doctors',   count: stats.doctors,  pct: Math.round((stats.doctors  / stats.total_users) * 100), color: '#10b981' },
-              { role: 'Admins',    count: stats.admins,   pct: Math.round((stats.admins   / stats.total_users) * 100), color: '#f59e0b' },
-            ].map((row, i) => (
-              <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                  {row.role}
+            {/* System alerts */}
+            {fallback.systemAlerts?.length > 0 && (
+              <Card noPad>
+                <SectionHeader title="System Alerts" subtitle={`${fallback.systemAlerts.length} recent alerts`} />
+                <div>
+                  {fallback.systemAlerts.map((alert, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderBottom: i < fallback.systemAlerts.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                      <AlertCircle size={14} color={alert.severity === 'critical' ? 'var(--danger)' : alert.severity === 'warning' ? 'var(--warning)' : 'var(--brand)'} strokeWidth={2} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{alert.message}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{new Date(alert.timestamp).toLocaleString()}</div>
+                      </div>
+                      <Badge label={alert.severity || 'info'} variant={alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info'} />
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.025em' }}>{row.count}</div>
-                <div style={{ marginTop: '0.625rem', height: 4, background: '#e5e7eb', borderRadius: 2 }}>
-                  <div style={{ width: `${row.pct}%`, height: '100%', background: row.color, borderRadius: 2 }} />
-                </div>
-                <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: 4 }}>{row.pct}% of all users</div>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
-
-        {/* ── Profile ────────────────────────────────────────────────────────── */}
-        {tab === 'profile' && (
-          <ProfileSettings viewMode={true} />
+              </Card>
+            )}
+          </>
         )}
 
-        {/* ── Settings ───────────────────────────────────────────────────────── */}
-        {tab === 'settings' && (
-          <ProfileSettings viewMode={false} />
+        {/* ── USERS ── */}
+        {tab === 'users' && (
+          <>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>User Management</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>All registered users on the platform</p>
+            </div>
+            <Card noPad>
+              <SectionHeader title="All Users" subtitle={`${fallback.totalUsers} total`} />
+              <Table
+                columns={['User', 'Email', 'Role', 'Joined', 'Status']}
+                rows={(fallback.recentUsers || []).map(u => [
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{u.name}</span>,
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{u.email}</span>,
+                  <Badge label={u.role} variant={u.role === 'doctor' ? 'info' : 'success'} />,
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</span>,
+                  <Badge label="Active" variant="success" />,
+                ])}
+              />
+            </Card>
+          </>
         )}
 
+        {/* ── ACTIVITY ── */}
+        {tab === 'activity' && (
+          <>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>System Activity</h1>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>Real-time system metrics and logs</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Resource Usage</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <MetricBar label="CPU"          value={34} max={100} color="var(--brand)"   />
+                  <MetricBar label="RAM"          value={58} max={100} color="var(--success)"  />
+                  <MetricBar label="Disk"         value={72} max={100} color="var(--warning)"  />
+                  <MetricBar label="Network I/O"  value={41} max={100} color="#8b5cf6"         />
+                </div>
+              </Card>
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Activity Log</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { text: 'New doctor registered', time: '2 min ago', icon: User, color: 'var(--brand)' },
+                    { text: 'Rehab session completed', time: '5 min ago', icon: Activity, color: 'var(--success)' },
+                    { text: 'Patient care request sent', time: '12 min ago', icon: Mail, color: '#8b5cf6' },
+                    { text: 'System backup completed', time: '1 hr ago', icon: Database, color: 'var(--text-muted)' },
+                    { text: 'High memory alert cleared', time: '2 hr ago', icon: Cpu, color: 'var(--warning)' },
+                  ].map((e, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, paddingBottom: 12, borderBottom: i < 4 ? '1px solid var(--border-light)' : 'none' }}>
+                      <e.icon size={13} color={e.color} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{e.text}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{e.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {tab === 'profile'  && <ProfileSettings viewMode={true} />}
+        {tab === 'settings' && <ProfileSettings viewMode={false} />}
       </div>
     </DashboardLayout>
   )
@@ -229,17 +329,10 @@ export default function AdminDashboard() {
 
 function LoadingScreen() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc', flexDirection: 'column', gap: '0.75rem' }}>
-      <div style={{ width: 36, height: 36, border: '3px solid #e5e7eb', borderTopColor: '#0f172a', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-      <p style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>Loading dashboard…</p>
-    </div>
-  )
-}
-
-function ErrorBanner({ message }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '0.75rem 1rem', color: '#991b1b', fontSize: '0.8125rem' }}>
-      {message}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-app)', flexDirection: 'column', gap: 12 }}>
+      <div style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Loading admin console…</p>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }

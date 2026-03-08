@@ -1,4 +1,7 @@
 /* ===== Root variables ===== */
+
+@import './Theme.css';
+
 :root {
   --primary: #1976d2;
   --primary-light: #e3f2fd;

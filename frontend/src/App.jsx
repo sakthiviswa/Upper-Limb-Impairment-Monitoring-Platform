@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 
 import Navbar              from './components/layout/Navbar'
 import ProtectedRoute      from './components/ProtectedRoute'
@@ -11,12 +12,10 @@ import PatientDashboard    from './dashboards/PatientDashboard'
 import DoctorDashboard     from './dashboards/DoctorDashboard'
 import AdminDashboard      from './dashboards/AdminDashboard'
 import UnauthorizedPage    from './pages/UnauthorizedPage'
-import ProfileSettings     from './components/ProfileSettings'
-import ToastProvider from './components/ToastProvider'
+import ToastProvider       from './components/ToastProvider'
 
-import './App.css';
+import './App.css'
 
-// Component to redirect /profile and /settings to dashboard with tab
 function RedirectToDashboard() {
   const { user } = useAuth()
   const role = user?.role || 'patient'
@@ -27,55 +26,53 @@ function RedirectToDashboard() {
 
 export default function App() {
   return (
-    <ToastProvider>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes – no Navbar */}
-          <Route path="/login"        element={<LoginPage />} />
-          <Route path="/signup"       element={<SignupPage />} />
-          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+    // ThemeProvider must wrap everything so CSS variables are applied to <html>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login"        element={<LoginPage />} />
+              <Route path="/signup"       element={<SignupPage />} />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-          {/* Root → redirect to role dashboard */}
-          <Route path="/" element={<RoleBasedRedirect />} />
+              {/* Root redirect */}
+              <Route path="/" element={<RoleBasedRedirect />} />
 
-          {/* Protected routes – wrapped with Navbar */}
-          <Route element={<WithNavbar />}>
-            {/* Patient */}
-            <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
-              <Route path="/patient/dashboard" element={<PatientDashboard />} />
-            </Route>
+              {/* Protected routes */}
+              <Route element={<WithNavbar />}>
+                <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
+                  <Route path="/patient/dashboard" element={<PatientDashboard />} />
+                </Route>
 
-            {/* Doctor */}
-            <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
-              <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-            </Route>
+                <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
+                  <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+                </Route>
 
-            {/* Admin */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            </Route>
-            {/* User profile / settings (all authenticated roles) */}
-            <Route element={<ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']} />}>
-              <Route path="/profile" element={<RedirectToDashboard />} />
-              <Route path="/settings" element={<RedirectToDashboard />} />
-            </Route>
-          </Route>
+                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-    </ToastProvider>
+                <Route element={<ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']} />}>
+                  <Route path="/profile"  element={<RedirectToDashboard />} />
+                  <Route path="/settings" element={<RedirectToDashboard />} />
+                </Route>
+              </Route>
+
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   )
 }
 
-/** Layout wrapper that renders Navbar above protected content */
 function WithNavbar() {
   const { user } = useAuth()
   const role = user?.role || 'patient'
-
   return (
     <>
       <Navbar user={user} role={role} />

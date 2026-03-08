@@ -1,0 +1,129 @@
+/* theme.css — import in index.css or App.css */
+
+:root, [data-theme="light"] {
+  /* backgrounds */
+  --bg-app:       #f4f6f9;
+  --bg-card:      #ffffff;
+  --bg-card2:     #f8fafc;
+  --bg-sidebar:   #ffffff;
+  --bg-navbar:    #ffffff;
+  --bg-input:     #f8fafc;
+  --bg-hover:     #f1f5f9;
+  --bg-active:    #eff6ff;
+  --bg-overlay:   rgba(0,0,0,0.5);
+
+  /* borders */
+  --border:       #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #3b82f6;
+
+  /* text */
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --text-inverse:   #ffffff;
+
+  /* brand */
+  --brand:          #2563eb;
+  --brand-hover:    #1d4ed8;
+  --brand-light:    #eff6ff;
+  --brand-border:   #bfdbfe;
+
+  /* status */
+  --success:        #16a34a;
+  --success-bg:     #f0fdf4;
+  --success-border: #bbf7d0;
+  --warning:        #d97706;
+  --warning-bg:     #fffbeb;
+  --warning-border: #fde68a;
+  --danger:         #dc2626;
+  --danger-bg:      #fef2f2;
+  --danger-border:  #fecaca;
+
+  /* shadows */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:   0 10px 30px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+
+  /* sidebar */
+  --sidebar-text:       #6b7280;
+  --sidebar-text-active:#0f172a;
+  --sidebar-icon:       #9ca3af;
+  --sidebar-icon-active:#0f172a;
+  --sidebar-active-bg:  #f1f5f9;
+
+  /* scrollbar */
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+}
+
+[data-theme="dark"] {
+  /* backgrounds */
+  --bg-app:       #0a0e17;
+  --bg-card:      #111827;
+  --bg-card2:     #0f172a;
+  --bg-sidebar:   #0d1117;
+  --bg-navbar:    #0d1117;
+  --bg-input:     #1c2333;
+  --bg-hover:     rgba(255,255,255,0.05);
+  --bg-active:    rgba(59,130,246,0.12);
+  --bg-overlay:   rgba(0,0,0,0.75);
+
+  /* borders */
+  --border:       rgba(255,255,255,0.08);
+  --border-light: rgba(255,255,255,0.05);
+  --border-focus: #3b82f6;
+
+  /* text */
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #4b5563;
+  --text-inverse:   #0f172a;
+
+  /* brand */
+  --brand:          #3b82f6;
+  --brand-hover:    #60a5fa;
+  --brand-light:    rgba(59,130,246,0.1);
+  --brand-border:   rgba(59,130,246,0.25);
+
+  /* status */
+  --success:        #34d399;
+  --success-bg:     rgba(52,211,153,0.08);
+  --success-border: rgba(52,211,153,0.2);
+  --warning:        #fbbf24;
+  --warning-bg:     rgba(251,191,36,0.08);
+  --warning-border: rgba(251,191,36,0.2);
+  --danger:         #f87171;
+  --danger-bg:      rgba(248,113,113,0.08);
+  --danger-border:  rgba(248,113,113,0.2);
+
+  /* shadows */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg:   0 10px 30px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.3);
+
+  /* sidebar */
+  --sidebar-text:       #6b7280;
+  --sidebar-text-active:#f1f5f9;
+  --sidebar-icon:       #4b5563;
+  --sidebar-icon-active:#f1f5f9;
+  --sidebar-active-bg:  rgba(59,130,246,0.12);
+
+  /* scrollbar */
+  --scrollbar-track: #111827;
+  --scrollbar-thumb: #374151;
+}
+
+/* Smooth transitions on theme switch */
+*, *::before, *::after {
+  transition:
+    background-color 0.22s ease,
+    border-color     0.22s ease,
+    color            0.15s ease,
+    box-shadow       0.22s ease;
+}
+
+/* Global scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 99px; }
