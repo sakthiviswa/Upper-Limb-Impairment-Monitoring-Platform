@@ -28,9 +28,10 @@ POST /api/doctor/assign-exercises                   – doctor assigns exercises
 Requires JWT.
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
+import os
 
 from extensions import db
 from models.user import User
@@ -910,3 +911,61 @@ def assign_exercises():
         "assignment_id": assignment.id,
         "count":         len(exercises),
     }), 201
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DOCTOR: Serve rehab session graphs (angle-vs-time & progress charts)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.get("/doctor/session-graph/<int:session_id>/<graph_type>")
+@jwt_required()
+def get_session_graph(session_id, graph_type):
+    """
+    Serves a PNG graph for a rehab session.
+    graph_type: 'angle' or 'progress'
+    
+    Security: only the assigned doctor can view the patient's graphs.
+    """
+    if graph_type not in ('angle', 'progress'):
+        return jsonify({"message": "Invalid graph type"}), 400
+
+    doctor_id = int(get_jwt_identity())
+    doctor = User.query.get(doctor_id)
+    if not doctor or doctor.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    rehab_db = SessionLocal()
+    try:
+        rehab_session = rehab_db.query(RehabSession).filter_by(id=session_id).first()
+        if not rehab_session:
+            return jsonify({"message": "Session not found"}), 404
+
+        rehab_patient = rehab_db.query(RehabPatient).filter_by(id=rehab_session.patient_id).first()
+        if not rehab_patient:
+            return jsonify({"message": "Patient not found"}), 404
+
+        # Security: confirm patient is assigned to this doctor
+        flask_patient = User.query.filter_by(
+            email=rehab_patient.email,
+            role="patient",
+            assigned_doctor_id=doctor_id,
+            doctor_accepted=True,
+        ).first()
+        if not flask_patient:
+            return jsonify({"message": "Patient not assigned to you"}), 403
+
+        # Get the appropriate graph path
+        if graph_type == 'angle':
+            graph_path = rehab_session.graph_path
+        else:  # progress
+            graph_path = rehab_session.progress_path
+
+        if not graph_path or not os.path.isfile(graph_path):
+            return jsonify({"message": "Graph not available"}), 404
+
+        return send_file(graph_path, mimetype='image/png')
+
+    except Exception as e:
+        return jsonify({"message": f"Error: {str(e)}"}), 500
+    finally:
+        rehab_db.close()

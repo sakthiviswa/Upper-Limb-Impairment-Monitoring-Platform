@@ -1,5 +1,7 @@
 """Patients CRUD router."""
 
+
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 from sqlalchemy import func
@@ -15,6 +17,9 @@ router = APIRouter(prefix="/patients", tags=["Patients"])
 # ---------------------------------------------------
 # CREATE PATIENT
 # ---------------------------------------------------
+
+
+
 @router.post("/", status_code=201)
 def create_patient(data: PatientCreate, db: DBSession = Depends(get_db)):
 

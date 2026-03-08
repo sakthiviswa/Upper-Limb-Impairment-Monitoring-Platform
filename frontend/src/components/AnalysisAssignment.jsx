@@ -3,16 +3,10 @@
  * Doctor panel rendered when subTab === 'report_analysis' or 'exercise_assignment'.
  *
  * Place at: src/components/AnalysisAssignment.jsx
- *
- * In DoctorDashboard.jsx add:
- *   import AnalysisAssignment from '../components/AnalysisAssignment'
- *   ...
- *   {(tab === 'report_analysis' || tab === 'exercise_assignment') && (
- *     <AnalysisAssignment subTab={tab} />
- *   )}
  */
 
 import { useState, useEffect } from 'react'
+import GraphPanel from './GraphPanel'
 import {
   BarChart2, Dumbbell, User, Activity, TrendingUp,
   TrendingDown, Minus, Send, CheckCircle, FileText,
@@ -311,7 +305,7 @@ export default function AnalysisAssignment({ subTab }) {
             Report Analysis
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-            Review patient session reports and angle data
+            Review patient session reports, angle data and movement graphs
           </p>
         </div>
 
@@ -368,10 +362,10 @@ export default function AnalysisAssignment({ subTab }) {
                   {/* Metrics */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 14 }}>
                     {[
-                      { label: 'Avg Angle',   value: `${s.avg_angle}°`,                              hi: true  },
-                      { label: 'Max Angle',   value: `${s.max_angle}°`,                              hi: false },
-                      { label: 'Accuracy',    value: `${s.accuracy}%`,                               hi: false },
-                      { label: 'Delta',       value: `${delta > 0 ? '+' : ''}${delta}°`,             hi: delta > 0 },
+                      { label: 'Avg Angle', value: `${s.avg_angle}°`,                   hi: true  },
+                      { label: 'Max Angle', value: `${s.max_angle}°`,                   hi: false },
+                      { label: 'Accuracy',  value: `${s.accuracy}%`,                    hi: false },
+                      { label: 'Delta',     value: `${delta > 0 ? '+' : ''}${delta}°`,  hi: delta > 0 },
                     ].map(({ label, value, hi }) => (
                       <div key={label} style={{
                         background: hi ? 'var(--brand-light)' : 'var(--bg-card2)',
@@ -387,6 +381,16 @@ export default function AnalysisAssignment({ subTab }) {
                       </div>
                     ))}
                   </div>
+
+                  {/* ── Graphs ── */}
+                  <GraphPanel
+                    sessionId={s.id}
+                    hasAngleGraph={!!s.graph_path}
+                    hasProgressGraph={!!s.progress_path}
+                  />
+
+                  {/* Divider */}
+                  <div style={{ height: 1, background: 'var(--border)', margin: '14px 0 0' }} />
 
                   <DoctorInsightBox session={s} patientId={selectedPt.id} showToast={showToast} />
                 </Card>
