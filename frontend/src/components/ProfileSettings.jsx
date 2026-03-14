@@ -1,5 +1,7 @@
 /**
  * ProfileSettings.jsx — fully theme-aware via CSS variables
+ * UPDATED: DoctorCard now has a "View Profile" button that opens DoctorProfileModal.
+ *          All original features preserved.
  */
 
 import { useState, useEffect } from 'react'
@@ -7,11 +9,13 @@ import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
 import { useLocation } from 'react-router-dom'
 import { useToast } from './ToastProvider'
+import DoctorProfileModal from './ui/DoctorProfileModal'          // ← NEW IMPORT
 import {
   User, Mail, Phone, Calendar, Shield, Activity,
   CheckCircle, Clock, Star, Users, MapPin, Award,
   Check, AlertCircle, Info, Bell, Settings,
-  Briefcase, GraduationCap, Building2, Globe, BadgeCheck,
+  Briefcase, GraduationCap, Building2, Globe, BadgeCheck, Eye,
+  Stethoscope,
 } from 'lucide-react'
 
 /* ── Shared input styles injected once ─────────────────────────────── */
@@ -95,6 +99,9 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
     injuredArm: '', injuryType: '', injurySeverity: '',
     dateOfInjury: '', selectedDoctorId: '',
     sessionDuration: '', difficultyLevel: '', reminderEnabled: false,
+    // Doctor fields
+    specialization: '', qualification: '', hospital: '', experience: '',
+    location: '', languages: '', consultFee: '', bio: '', availability: '',
   })
   const [doctors, setDoctors]               = useState([])
   const [doctorsLoading, setDoctorsLoading] = useState(false)
@@ -105,6 +112,9 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
   const [doctorAccepted, setDoctorAccepted] = useState(false)
   const [assignedDoctor, setAssignedDoctor] = useState('')
   const [notifiedDoctor, setNotifiedDoctor] = useState(false)
+
+  // ── NEW: modal state ────────────────────────────────────────────────
+  const [viewingDoctorId, setViewingDoctorId] = useState(null)
 
   useEffect(() => {
     if (role !== 'patient') return
@@ -122,6 +132,19 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
           setForm({ ...base, injuredArm: res.data.injuredArm || '', injuryType: res.data.injuryType || '', injurySeverity: res.data.injurySeverity || '', dateOfInjury: res.data.dateOfInjury || '', selectedDoctorId: res.data.selectedDoctorId || '', sessionDuration: res.data.sessionDuration || '', difficultyLevel: res.data.difficultyLevel || '', reminderEnabled: res.data.reminderEnabled || false })
           setDoctorAccepted(res.data.doctorAccepted || false)
           setAssignedDoctor(res.data.doctorName || '')
+        } else if (role === 'doctor') {
+          setForm({
+            ...base,
+            specialization: res.data.specialization || '',
+            qualification: res.data.qualification || '',
+            hospital: res.data.hospital || '',
+            experience: res.data.experience || '',
+            location: res.data.location || '',
+            languages: res.data.languages || '',
+            consultFee: res.data.consult_fee || '',
+            bio: res.data.bio || '',
+            availability: res.data.availability || '',
+          })
         } else {
           setForm({ ...base, injuredArm: '', injuryType: '', injurySeverity: '', dateOfInjury: '', selectedDoctorId: '', sessionDuration: '', difficultyLevel: '', reminderEnabled: false })
         }
@@ -149,8 +172,12 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
     setSaving(true); setSuccess(''); setNotifiedDoctor(false)
     const payload = { fullName: form.fullName, age: form.age, gender: form.gender, phoneNumber: form.phoneNumber }
     if (role === 'patient') Object.assign(payload, { injuredArm: form.injuredArm, injuryType: form.injuryType, injurySeverity: form.injurySeverity, dateOfInjury: form.dateOfInjury, selectedDoctorId: form.selectedDoctorId, sessionDuration: form.sessionDuration, difficultyLevel: form.difficultyLevel, reminderEnabled: form.reminderEnabled })
+    if (role === 'doctor') Object.assign(payload, { specialization: form.specialization, qualification: form.qualification, hospital: form.hospital, experience: form.experience, location: form.location, languages: form.languages, consult_fee: form.consultFee, bio: form.bio, availability: form.availability })
+    
+    const endpoint = role === 'doctor' ? '/doctor/profile' : '/user/profile'
+    
     try {
-      const res = await api.put('/user/profile', payload)
+      const res = await api.put(endpoint, payload)
       const msg = res.data.notifiedDoctor ? 'Profile saved & doctor notified.' : 'Profile saved successfully.'
       setSuccess(msg)
       if (res.data.notifiedDoctor) setNotifiedDoctor(true)
@@ -174,6 +201,14 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, fontFamily: "'Sora', sans-serif", maxWidth: 720 }}>
       <style>{INPUT_STYLES}</style>
+
+      {/* ── NEW: Doctor Profile Modal ──────────────────────────────── */}
+      <DoctorProfileModal
+        doctorId={viewingDoctorId}
+        onClose={() => setViewingDoctorId(null)}
+        selected={String(form.selectedDoctorId) === String(viewingDoctorId)}
+        onSelect={!viewMode ? (id) => setForm(p => ({ ...p, selectedDoctorId: String(id) })) : undefined}
+      />
 
       {/* Page header */}
       <div>
@@ -235,6 +270,54 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
             </div>
           </Card>
 
+          {role === 'doctor' && (
+            <>
+              {/* Doctor Profile */}  
+              <Card>
+                <SectionHead>Professional Information</SectionHead>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <Field label="Specialization" icon={Stethoscope}>
+                    <input className="ps-input" type="text" name="specialization" value={form.specialization} onChange={handleChange} placeholder="e.g. Orthopedic Rehab" />
+                  </Field>
+                  <Field label="Qualification" icon={GraduationCap}>
+                    <input className="ps-input" type="text" name="qualification" value={form.qualification} onChange={handleChange} placeholder="e.g. MBBS, MS Ortho" />
+                  </Field>
+                  <Field label="Hospital/Clinic" icon={Building2}>
+                    <input className="ps-input" type="text" name="hospital" value={form.hospital} onChange={handleChange} placeholder="e.g. Apollo Hospitals" />
+                  </Field>
+                  <Field label="Experience (years)" icon={Award}>
+                    <input className="ps-input" type="number" name="experience" value={form.experience} onChange={handleChange} min="0" placeholder="Years of experience" />
+                  </Field>
+                  <Field label="Location" icon={MapPin}>
+                    <input className="ps-input" type="text" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Chennai, Tamil Nadu" />
+                  </Field>
+                  <Field label="Languages" icon={Globe}>
+                    <input className="ps-input" type="text" name="languages" value={form.languages} onChange={handleChange} placeholder="e.g. English, Tamil" />
+                  </Field>
+                  <Field label="Consultation Fee" icon={Briefcase}>
+                    <input className="ps-input" type="text" name="consultFee" value={form.consultFee} onChange={handleChange} placeholder="e.g. ₹500" />
+                  </Field>
+                  <Field label="Availability" icon={Clock}>
+                    <input className="ps-input" type="text" name="availability" value={form.availability} onChange={handleChange} placeholder="e.g. Mon–Fri, 9am–5pm" />
+                  </Field>
+                </div>
+                <div style={{ marginTop: 16 }}>
+                  <Field label="Bio/About" icon={Info}>
+                    <textarea 
+                      className="ps-input" 
+                      name="bio" 
+                      value={form.bio} 
+                      onChange={handleChange} 
+                      placeholder="Tell patients about yourself, your approach to treatment, etc." 
+                      rows={4} 
+                      style={{ resize: 'vertical', minHeight: '80px' }}
+                    />
+                  </Field>
+                </div>
+              </Card>
+            </>
+          )}
+
           {role === 'patient' && (
             <>
               {/* Medical Info */}
@@ -291,6 +374,7 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
                         selected={String(form.selectedDoctorId) === String(doc.id)}
                         disabled={viewMode}
                         onSelect={() => !viewMode && setForm(p => ({ ...p, selectedDoctorId: String(doc.id) }))}
+                        onViewProfile={() => setViewingDoctorId(doc.id)}   // ← NEW
                       />
                     ))}
                   </div>
@@ -338,33 +422,39 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
   )
 }
 
-/* ── DoctorCard ───────────────────────────────────────────────────── */
-function DoctorCard({ doc, selected, disabled, onSelect }) {
+/* ── DoctorCard ─────────────────────────────────────────────────────
+   UPDATED: added onViewProfile prop → "View Profile" button
+─────────────────────────────────────────────────────────────────── */
+function DoctorCard({ doc, selected, disabled, onSelect, onViewProfile }) {
   const initials = (doc.name || '').split(' ').slice(0,2).map(w => w[0]?.toUpperCase()).join('')
 
   return (
-    <div
-      onClick={onSelect}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-        background: selected ? 'var(--bg-active)' : 'var(--bg-card2)',
-        border: `1.5px solid ${selected ? 'var(--brand)' : 'var(--border)'}`,
-        borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'background 0.12s, border-color 0.12s',
-      }}
-    >
-      {/* Avatar */}
-      <div style={{
-        width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-        background: selected ? 'var(--brand)' : 'var(--text-primary)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, fontWeight: 700, color: '#fff',
-      }}>
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+      background: selected ? 'var(--bg-active)' : 'var(--bg-card2)',
+      border: `1.5px solid ${selected ? 'var(--brand)' : 'var(--border)'}`,
+      borderRadius: 10,
+      transition: 'background 0.12s, border-color 0.12s',
+    }}>
+      {/* Avatar — clicking selects the doctor */}
+      <div
+        onClick={onSelect}
+        style={{
+          width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+          background: selected ? 'var(--brand)' : 'var(--text-primary)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700, color: '#fff',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+      >
         {initials || <User size={18} color="#fff" strokeWidth={2} />}
       </div>
 
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Info — clicking selects the doctor */}
+      <div
+        onClick={onSelect}
+        style={{ flex: 1, minWidth: 0, cursor: disabled ? 'not-allowed' : 'pointer' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Dr. {doc.name}</span>
           {doc.verified && <BadgeCheck size={13} color="var(--brand)" strokeWidth={2} />}
@@ -390,15 +480,43 @@ function DoctorCard({ doc, selected, disabled, onSelect }) {
         </div>
       </div>
 
-      {/* Check */}
-      <div style={{
-        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-        background: selected ? 'var(--brand)' : 'var(--bg-card)',
-        border: `1.5px solid ${selected ? 'var(--brand)' : 'var(--border)'}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'background 0.12s, border-color 0.12s',
-      }}>
-        {selected && <Check size={12} color="#fff" strokeWidth={3} />}
+      {/* Right side: View Profile button + check */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* ── NEW: View Profile button ── */}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onViewProfile() }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '5px 10px', borderRadius: 6,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            color: 'var(--brand)', fontFamily: 'inherit',
+            transition: 'background 0.12s, border-color 0.12s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.borderColor = 'var(--brand)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+        >
+          <Eye size={11} strokeWidth={2} />
+          View
+        </button>
+
+        {/* Selection check circle */}
+        <div
+          onClick={onSelect}
+          style={{
+            width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+            background: selected ? 'var(--brand)' : 'var(--bg-card)',
+            border: `1.5px solid ${selected ? 'var(--brand)' : 'var(--border)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.12s, border-color 0.12s',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {selected && <Check size={12} color="#fff" strokeWidth={3} />}
+        </div>
       </div>
     </div>
   )

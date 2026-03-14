@@ -12,7 +12,9 @@ POST /api/doctor/accept-patient/<patient_id>        – doctor accepts a patient
 POST /api/doctor/decline-patient/<patient_id>       – doctor declines a patient
 GET  /api/doctor/pending-patients                   – patients who selected this doctor
 GET  /api/doctor/accepted-patients                  – patients accepted by this doctor
-GET  /api/doctors                                   – list all doctors
+GET  /api/doctors                                   – list all doctors (full profile fields)
+GET  /api/doctor/profile/<id>                       – get a single doctor's full public profile  [NEW]
+PUT  /api/doctor/profile                            – doctor updates their own profile           [NEW]
 GET  /api/messages/conversations                    – list conversations for current user
 GET  /api/messages/conversation/<id>                – get messages in a conversation
 POST /api/messages/send                             – send a message
@@ -40,8 +42,6 @@ from models.message import Conversation, Message
 from models.exercise_assignment import ExerciseAssignment
 
 # Rehab DB — separate SQLAlchemy engine/session
-# SessionLocal is the session factory from your rehab database module.
-# Adjust this import if your SessionLocal lives in a different file.
 from database import SessionLocal
 from models.models import RehabSession, Patient as RehabPatient
 
@@ -78,6 +78,32 @@ def _get_rehab_patient_by_email(rehab_db, email: str):
     return rehab_db.query(RehabPatient).filter_by(email=email).first()
 
 
+def _doctor_public_dict(d: User, patient_count: int) -> dict:
+    """
+    Returns the full public-facing dict for a doctor user.
+    Used by both /api/doctors (list) and /api/doctor/profile/<id> (detail).
+    """
+    return {
+        "id":             d.id,
+        "name":           d.name,
+        "email":          d.email,
+        "specialization": d.specialization  or "",
+        "qualification":  d.qualification   or "",
+        "hospital":       d.hospital        or "",
+        "experience":     d.experience,
+        "rating":         d.rating,
+        "review_count":   d.review_count,
+        "location":       d.location        or "",
+        "languages":      d.languages       or "",
+        "consult_fee":    d.consult_fee      or "",
+        "bio":            d.bio             or "",
+        "availability":   d.availability    or "",
+        "verified":       d.verified        or False,
+        "profile_image":  d.profile_image,
+        "patients_count": patient_count,
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PROFILE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -112,6 +138,22 @@ def get_profile():
             "sessionDuration": user.session_duration,
             "difficultyLevel": user.difficulty_level,
             "reminderEnabled": user.reminder_enabled,
+        })
+    if user.role in ("doctor", "admin"):
+        profile.update({
+            "specialization": user.specialization or "",
+            "qualification":  user.qualification  or "",
+            "hospital":       user.hospital       or "",
+            "experience":     user.experience,
+            "rating":         user.rating,
+            "review_count":   user.review_count,
+            "location":       user.location       or "",
+            "languages":      user.languages      or "",
+            "consult_fee":    user.consult_fee     or "",
+            "bio":            user.bio            or "",
+            "availability":   user.availability   or "",
+            "verified":       user.verified       or False,
+            "profile_image":  user.profile_image,
         })
     return jsonify(profile), 200
 
@@ -197,26 +239,99 @@ def update_profile():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DOCTORS LIST
+# DOCTORS LIST  (updated — returns all new profile fields)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.get("/doctors")
 @jwt_required()
 def list_doctors():
+    """
+    Returns all doctors with full public profile fields.
+    Used by the patient's doctor-selection UI (ProfileSettings → DoctorCard).
+    """
     doctors = User.query.filter_by(role="doctor").all()
     result = []
     for d in doctors:
         patient_count = User.query.filter_by(
             role="patient", assigned_doctor_id=d.id, doctor_accepted=True
         ).count()
-        result.append({
-            "id":             d.id,
-            "name":           d.name,
-            "email":          d.email,
-            "specialization": getattr(d, "specialization", ""),
-            "patients_count": patient_count,
-        })
+        result.append(_doctor_public_dict(d, patient_count))
     return jsonify({"doctors": result}), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — GET single doctor's full public profile
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.get("/doctor/profile/<int:doctor_id>")
+@jwt_required()
+def get_doctor_profile(doctor_id):
+    """
+    Returns the full public profile of a specific doctor.
+    Any authenticated user (patient / doctor / admin) may call this.
+    Called by DoctorProfileModal when a patient clicks "View Profile".
+    """
+    doctor = User.query.filter_by(id=doctor_id, role="doctor").first()
+    if not doctor:
+        return jsonify({"message": "Doctor not found"}), 404
+
+    patient_count = User.query.filter_by(
+        role="patient", assigned_doctor_id=doctor.id, doctor_accepted=True
+    ).count()
+
+    return jsonify(_doctor_public_dict(doctor, patient_count)), 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEW — Doctor updates their own extended profile
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@user_bp.put("/doctor/profile")
+@jwt_required()
+def update_doctor_profile():
+    """
+    Allows a doctor (or admin) to update their own extended profile fields
+    (specialization, bio, hospital, etc.) as well as the shared base fields.
+    """
+    user_id = int(get_jwt_identity())
+    doctor  = User.query.get(user_id)
+    if not doctor or doctor.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json() or {}
+
+    # Base personal fields (shared with patient update flow)
+    if "fullName"     in data: doctor.name         = (data["fullName"] or "").strip()
+    if "age"          in data: doctor.age           = data["age"]
+    if "gender"       in data: doctor.gender        = data["gender"]
+    if "phoneNumber"  in data: doctor.phone_number  = data["phoneNumber"]
+
+    # Doctor-specific extended fields
+    doctor_fields = [
+        "specialization", "qualification", "hospital",
+        "experience", "rating", "review_count",
+        "location", "languages", "consult_fee",
+        "bio", "availability", "profile_image",
+    ]
+    for field in doctor_fields:
+        if field in data:
+            setattr(doctor, field, data[field])
+
+    # Only admin can set/unset the verified badge
+    # (prevent doctors from self-verifying)
+    if "verified" in data and doctor.role == "admin":
+        doctor.verified = bool(data["verified"])
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Failed to update doctor profile: {str(e)}"}), 500
+
+    return jsonify({
+        "message": "Doctor profile updated successfully",
+        "profile": doctor.to_dict(),
+    }), 200
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -548,7 +663,6 @@ def patient_dashboard():
         for c in user_convs
     )
 
-    # Resolve assigned doctor email for SendReportButton
     assigned_doctor_email = None
     if user.assigned_doctor_id:
         doctor = User.query.get(user.assigned_doctor_id)
@@ -565,7 +679,7 @@ def patient_dashboard():
         "unread_messages":        unread_msgs,
         "doctor_accepted":        user.doctor_accepted,
         "assigned_doctor":        user.doctor_name,
-        "assigned_doctor_email":  assigned_doctor_email,   # ← NEW: used by SendReportButton
+        "assigned_doctor_email":  assigned_doctor_email,
     }
     return jsonify({"data": data}), 200
 
@@ -651,16 +765,12 @@ def admin_dashboard():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# NEW — PATIENT: Send session report to doctor
+# PATIENT: Send session report to doctor
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.post("/patient/send-session-report")
 @jwt_required()
 def send_session_report():
-    """
-    Patient clicks "Send to Doctor" from SessionHistory.
-    Looks up the rehab session, verifies ownership, notifies the doctor.
-    """
     user_id = int(get_jwt_identity())
     patient = User.query.get(user_id)
     if not patient or patient.role != "patient":
@@ -675,7 +785,6 @@ def send_session_report():
     if not patient.assigned_doctor_id:
         return jsonify({"message": "You have no assigned doctor yet"}), 400
 
-    # Look up session in the rehab DB
     rehab_db = SessionLocal()
     try:
         rehab_patient = _get_rehab_patient_by_email(rehab_db, patient.email)
@@ -718,13 +827,12 @@ def send_session_report():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# NEW — PATIENT: View assigned exercises
+# PATIENT: View assigned exercises
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.get("/patient/my-exercises")
 @jwt_required()
 def get_my_exercises():
-    """Patient views exercises assigned by their doctor."""
     user_id = int(get_jwt_identity())
     patient = User.query.get(user_id)
     if not patient or patient.role != "patient":
@@ -741,22 +849,17 @@ def get_my_exercises():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# NEW — DOCTOR: Get a patient's rehab sessions (Report Analysis panel)
+# DOCTOR: Get a patient's rehab sessions (Report Analysis panel)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.get("/doctor/patient-sessions/<int:patient_id>")
 @jwt_required()
 def get_patient_sessions(patient_id):
-    """
-    Doctor selects a patient in the Report Analysis sub-tab.
-    Returns all their rehab sessions from the rehab DB.
-    """
     doctor_id = int(get_jwt_identity())
     doctor = User.query.get(doctor_id)
     if not doctor or doctor.role not in ("doctor", "admin"):
         return jsonify({"message": "Forbidden"}), 403
 
-    # Security: confirm this patient is assigned to this doctor
     patient = User.query.filter_by(
         id=patient_id,
         role="patient",
@@ -786,16 +889,12 @@ def get_patient_sessions(patient_id):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# NEW — DOCTOR: Save analysis note on a session
+# DOCTOR: Save analysis note on a session
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.post("/doctor/session-note/<int:session_id>")
 @jwt_required()
 def save_session_note(session_id):
-    """
-    Doctor writes a clinical note on a specific rehab session.
-    Writes to RehabSession.doctor_notes (existing field).
-    """
     doctor_id = int(get_jwt_identity())
     doctor = User.query.get(doctor_id)
     if not doctor or doctor.role not in ("doctor", "admin"):
@@ -808,7 +907,6 @@ def save_session_note(session_id):
     if not patient_id:
         return jsonify({"message": "patient_id is required"}), 400
 
-    # Security: confirm patient is assigned to this doctor
     patient = User.query.filter_by(
         id=patient_id,
         role="patient",
@@ -843,16 +941,12 @@ def save_session_note(session_id):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# NEW — DOCTOR: Assign exercises to a patient
+# DOCTOR: Assign exercises to a patient
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @user_bp.post("/doctor/assign-exercises")
 @jwt_required()
 def assign_exercises():
-    """
-    Doctor prescribes exercises to an accepted patient.
-    Stores assignment and notifies the patient.
-    """
     doctor_id = int(get_jwt_identity())
     doctor = User.query.get(doctor_id)
     if not doctor or doctor.role not in ("doctor", "admin"):
@@ -868,7 +962,6 @@ def assign_exercises():
     if not exercises:
         return jsonify({"message": "At least one exercise is required"}), 400
 
-    # Security: confirm patient is assigned to this doctor
     patient = User.query.filter_by(
         id=patient_id,
         role="patient",
@@ -886,7 +979,6 @@ def assign_exercises():
     )
     db.session.add(assignment)
 
-    # Build a readable exercise name list for the notification
     ex_names = ", ".join(e.get("name", "exercise") for e in exercises[:3])
     suffix   = f" and {len(exercises) - 3} more" if len(exercises) > 3 else ""
 
@@ -920,12 +1012,6 @@ def assign_exercises():
 @user_bp.get("/doctor/session-graph/<int:session_id>/<graph_type>")
 @jwt_required()
 def get_session_graph(session_id, graph_type):
-    """
-    Serves a PNG graph for a rehab session.
-    graph_type: 'angle' or 'progress'
-    
-    Security: only the assigned doctor can view the patient's graphs.
-    """
     if graph_type not in ('angle', 'progress'):
         return jsonify({"message": "Invalid graph type"}), 400
 
@@ -944,7 +1030,6 @@ def get_session_graph(session_id, graph_type):
         if not rehab_patient:
             return jsonify({"message": "Patient not found"}), 404
 
-        # Security: confirm patient is assigned to this doctor
         flask_patient = User.query.filter_by(
             email=rehab_patient.email,
             role="patient",
@@ -954,11 +1039,7 @@ def get_session_graph(session_id, graph_type):
         if not flask_patient:
             return jsonify({"message": "Patient not assigned to you"}), 403
 
-        # Get the appropriate graph path
-        if graph_type == 'angle':
-            graph_path = rehab_session.graph_path
-        else:  # progress
-            graph_path = rehab_session.progress_path
+        graph_path = rehab_session.graph_path if graph_type == 'angle' else rehab_session.progress_path
 
         if not graph_path or not os.path.isfile(graph_path):
             return jsonify({"message": "Graph not available"}), 404

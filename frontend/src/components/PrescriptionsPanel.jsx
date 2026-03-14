@@ -46,91 +46,91 @@ const MEDIA = {
   },
   'external rotation': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=_UvmPNGtlPM&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/_UvmPNGtlPM?rel=0&modestbranding=1',
     alt: 'External rotation demo',
   },
   'cross-body stretch': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=swvXpKN832E&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/swvXpKN832E?rel=0&modestbranding=1',
     alt: 'Cross-body shoulder stretch',
   },
   'overhead press (light)': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=432yWPJQ-is&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/432yWPJQ-is?rel=0&modestbranding=1',
     alt: 'Overhead press demo',
   },
 
   /* ── Elbow / Forearm ── */
   'wrist curl': {
     type: 'video',
-    url: 'https://www.youtube.com/shorts/GldcURoToGc?rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/GldcURoToGc?rel=0&modestbranding=1',
     alt: 'Wrist curl demo',
   },
   'supination/pronation': {
     type: 'video',
-    url: 'https://www.youtube.com/shorts/Mq2AO9n5k4o?rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/Mq2AO9n5k4o?rel=0&modestbranding=1',
     alt: 'Forearm supination & pronation',
   },
   'bicep curl (light)': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=QY4gCIYbGQk&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/QY4gCIYbGQk?rel=0&modestbranding=1',
     alt: 'Bicep curl demo',
   },
   'tricep extension': {
     type: 'video',
-    url: 'https://www.youtube.com/shorts/lmVE4ua5MJo?rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/lmVE4ua5MJo?rel=0&modestbranding=1',
     alt: 'Tricep extension demo',
   },
   'elbow flex/extend': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=cNbFI8Gft4A&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/cNbFI8Gft4A?rel=0&modestbranding=1',
     alt: 'Elbow flexion & extension',
   },
 
   /* ── Knee ── */
   'quad sets': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=5TUK4uT2nnw&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/5TUK4uT2nnw?rel=0&modestbranding=1',
     alt: 'Quad sets exercise',
   },
   'straight leg raise': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=gobteD5GWkE&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/gobteD5GWkE?rel=0&modestbranding=1',
     alt: 'Straight leg raise demo',
   },
   'mini squat': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=w2arL8LK_6E&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/w2arL8LK_6E?rel=0&modestbranding=1',
     alt: 'Mini squat demo',
   },
   'step up': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=WCFCdxzFBa4&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/WCFCdxzFBa4?rel=0&modestbranding=1',
     alt: 'Step up demo',
   },
   'hamstring curl': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=oWu8RxtWdGE&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/oWu8RxtWdGE?rel=0&modestbranding=1',
     alt: 'Hamstring curl demo',
   },
 
   /* ── General / Misc ── */
   'deep breathing': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=8PqcxsiZ4KQ&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/8PqcxsiZ4KQ?rel=0&modestbranding=1',
     alt: 'Deep breathing technique',
   },
   'grip strengthener': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=BYLq4CJmuPU&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/BYLq4CJmuPU?rel=0&modestbranding=1',
     alt: 'Grip strengthener exercise',
   },
   'postural exercise': {
     type: 'video',
-    url: 'https://www.youtube.com/watch?v=5YokfY_rnWE&rel=0&modestbranding=1',
+    url: 'https://www.youtube.com/embed/5YokfY_rnWE?rel=0&modestbranding=1',
     alt: 'Postural exercise demo',
   },
-}
+};
 
 
 function getMedia(name) {
