@@ -1,7 +1,5 @@
 /**
  * DoctorDashboard.jsx — fully theme-aware via CSS variables
- * Updated: Live data hooks, greeting banner, status banners, shimmer stat cards,
- *          live schedule from appointments API — matching PatientDashboard style.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -26,10 +24,9 @@ import {
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────────────────
-   LIVE DATA HOOKS  (mirror of usePrescriptionCount in PatientDashboard)
+   LIVE DATA HOOKS
 ───────────────────────────────────────────────────────────────────── */
 
-/** Fetches GET /doctor/accepted-patients → returns live patient count */
 function useLivePatientCount(fallback = 0) {
   const [count,  setCount]  = useState(null)
   const [loaded, setLoaded] = useState(false)
@@ -41,13 +38,9 @@ function useLivePatientCount(fallback = 0) {
       .finally(() => setLoaded(true))
   }, [])
 
-  return {
-    patientCount:       count !== null ? count : fallback,
-    patientCountLoaded: loaded,
-  }
+  return { patientCount: count !== null ? count : fallback, patientCountLoaded: loaded }
 }
 
-/** Fetches GET /appointments → returns pending + upcoming counts + full list */
 function useLiveAppointmentCounts() {
   const [pending,  setPending]  = useState(null)
   const [upcoming, setUpcoming] = useState(null)
@@ -83,35 +76,27 @@ function useLiveAppointmentCounts() {
   }
 }
 
-/**
- * For each accepted patient, fetches their latest session from
- * GET /api/sessions/patient/{id} (rehabApi — the rehab microservice).
- * Returns a flat list of { patient, latestSession } objects sorted by
- * most-recent session first, plus the 5 most-recent sessions as alerts.
- */
 function useLivePatientSessions(acceptedPatients) {
-  const [rows,    setRows]    = useState([])
-  const [alerts,  setAlerts]  = useState([])
-  const [loaded,  setLoaded]  = useState(false)
+  const [rows,   setRows]   = useState([])
+  const [alerts, setAlerts] = useState([])
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (!acceptedPatients || acceptedPatients.length === 0) {
       setRows([]); setAlerts([]); setLoaded(true); return
     }
 
-    // Fetch latest session for every accepted patient in parallel
     const fetches = acceptedPatients.map(p =>
       rehabApi.get(`/api/sessions/patient/${p.rehab_patient_id || p.id}`)
         .then(r => {
           const sessions = r.data || []
-          const latest   = sessions[0] || null   // already ordered desc by router
+          const latest   = sessions[0] || null
           return { patient: p, latestSession: latest, allSessions: sessions }
         })
         .catch(() => ({ patient: p, latestSession: null, allSessions: [] }))
     )
 
     Promise.all(fetches).then(results => {
-      // Sort: patients with most-recent session first
       const sorted = results.sort((a, b) => {
         if (!a.latestSession) return 1
         if (!b.latestSession) return -1
@@ -119,7 +104,6 @@ function useLivePatientSessions(acceptedPatients) {
       })
       setRows(sorted)
 
-      // Build recent-alerts list: take the 5 latest sessions across all patients
       const allLatest = results
         .filter(r => r.latestSession)
         .map(r => ({ ...r.latestSession, patientName: r.patient.name }))
@@ -128,7 +112,7 @@ function useLivePatientSessions(acceptedPatients) {
       setAlerts(allLatest)
       setLoaded(true)
     })
-  }, [acceptedPatients?.length])   // re-run when patient list grows/shrinks
+  }, [acceptedPatients?.length])
 
   return { sessionRows: rows, sessionAlerts: alerts, sessionsLoaded: loaded }
 }
@@ -163,7 +147,6 @@ function SectionHeader({ title, subtitle, action }) {
   )
 }
 
-/** StatCard with shimmer skeleton + optional onClick (mirrors PatientDashboard) */
 function StatCard({ label, value, icon: Icon, color, loading, onClick }) {
   return (
     <Card
@@ -321,13 +304,19 @@ export default function DoctorDashboard() {
   const [acceptedPatients, setAcceptedPatients] = useState([])
   const [acting,           setActing]           = useState({})
 
+  // ── Listen for Navbar profile/settings clicks ──
+  useEffect(() => {
+    const handler = (e) => setTab(e.detail.tab)
+    window.addEventListener('navbar:tabchange', handler)
+    return () => window.removeEventListener('navbar:tabchange', handler)
+  }, [])
+
   /* ── Live data hooks ── */
   const { patientCount, patientCountLoaded } = useLivePatientCount(0)
   const {
     pendingAppts, upcomingAppts, apptLoaded, appointments, refetchAppts,
   } = useLiveAppointmentCounts()
 
-  /* ── accepted patients for session hook (fetched once on mount) ── */
   const [mountedAccepted, setMountedAccepted] = useState([])
   useEffect(() => {
     api.get('/doctor/accepted-patients')
@@ -357,7 +346,6 @@ export default function DoctorDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  /* ── Toast when appt requests arrive (fires once after initial load) ── */
   useEffect(() => {
     if (!apptLoaded) return
     if (pendingAppts > 0) showToast({
@@ -368,14 +356,12 @@ export default function DoctorDashboard() {
     })
   }, [apptLoaded])
 
-  /* ── Patients tab data ── */
   useEffect(() => {
     if (tab !== 'patients') return
     api.get('/doctor/pending-patients').then(r => setPendingPatients(r.data.patients || [])).catch(console.error)
     api.get('/doctor/accepted-patients').then(r => setAcceptedPatients(r.data.patients || [])).catch(console.error)
   }, [tab])
 
-  /* ── Refresh appointment counts on tab change ── */
   useEffect(() => {
     if (tab !== 'appointments') refetchAppts()
   }, [tab])
@@ -407,11 +393,9 @@ export default function DoctorDashboard() {
     } finally { setActing(p => ({ ...p, [patient.id]: null })) }
   }
 
-  /* ── Time-aware greeting ── */
   const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
-  /* ── Upcoming confirmed appointments (for schedule table) ── */
   const upcomingConfirmed = appointments
     .filter(a => a.status === 'confirmed' && new Date(a.appointment_date) > new Date())
     .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
@@ -437,7 +421,6 @@ export default function DoctorDashboard() {
         {/* ══════════════ OVERVIEW ══════════════ */}
         {tab === 'overview' && (
           <>
-            {/* ── Header ── */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
@@ -460,13 +443,8 @@ export default function DoctorDashboard() {
               </div>
             </div>
 
-            {/* ── Status banners ── */}
             {(data?.pending_reviews > 0) && (
-              <div style={{
-                padding: '12px 16px', borderRadius: 10,
-                background: 'var(--warning-bg)', border: '1px solid var(--warning-border)',
-                display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
-              }}>
+              <div style={{ padding: '12px 16px', borderRadius: 10, background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                 <UserPlus size={16} color="var(--warning)" strokeWidth={2} style={{ flexShrink: 0 }} />
                 <span style={{ color: 'var(--warning)', flex: 1 }}>
                   <strong>{data.pending_reviews} patient{data.pending_reviews > 1 ? 's' : ''}</strong> waiting for your care acceptance —{' '}
@@ -478,11 +456,7 @@ export default function DoctorDashboard() {
             )}
 
             {pendingAppts > 0 && (
-              <div style={{
-                padding: '12px 16px', borderRadius: 10,
-                background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)',
-                display: 'flex', alignItems: 'center', gap: 10, fontSize: 13,
-              }}>
+              <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.25)', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                 <CalendarDays size={16} color="#8b5cf6" strokeWidth={2} style={{ flexShrink: 0 }} />
                 <span style={{ color: '#8b5cf6', flex: 1 }}>
                   <strong>{pendingAppts} appointment request{pendingAppts > 1 ? 's' : ''}</strong> waiting for confirmation —{' '}
@@ -493,53 +467,22 @@ export default function DoctorDashboard() {
               </div>
             )}
 
-            {/* ── Live stat cards ── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
-              <StatCard
-                label="My Patients"
-                value={patientCount}
-                icon={Users}
-                color="#3b82f6"
-                loading={!patientCountLoaded}
-                onClick={() => setTab('patients')}
-              />
-              <StatCard
-                label="Pending Requests"
-                value={data?.pending_reviews ?? 0}
-                icon={ClipboardList}
-                color="#f59e0b"
-                onClick={() => setTab('patients')}
-              />
-              <StatCard
-                label="Appt Requests"
-                value={pendingAppts}
-                icon={CalendarDays}
-                color="#8b5cf6"
-                loading={!apptLoaded}
-                onClick={() => setTab('appointments')}
-              />
-              <StatCard
-                label="Upcoming Appts"
-                value={upcomingAppts}
-                icon={Activity}
-                color="#10b981"
-                loading={!apptLoaded}
-                onClick={() => setTab('appointments')}
-              />
+              <StatCard label="My Patients"      value={patientCount}          icon={Users}       color="#3b82f6" loading={!patientCountLoaded} onClick={() => setTab('patients')}      />
+              <StatCard label="Pending Requests" value={data?.pending_reviews ?? 0} icon={ClipboardList} color="#f59e0b"                        onClick={() => setTab('patients')}      />
+              <StatCard label="Appt Requests"    value={pendingAppts}          icon={CalendarDays} color="#8b5cf6" loading={!apptLoaded}          onClick={() => setTab('appointments')} />
+              <StatCard label="Upcoming Appts"   value={upcomingAppts}         icon={Activity}    color="#10b981" loading={!apptLoaded}          onClick={() => setTab('appointments')} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 296px', gap: 14 }}>
 
-              {/* ── Live schedule table ── */}
+              {/* Upcoming Schedule */}
               <Card noPad>
                 <SectionHeader
                   title="Upcoming Schedule"
                   subtitle={`${upcomingConfirmed.length} confirmed appointment${upcomingConfirmed.length !== 1 ? 's' : ''}`}
                   action={
-                    <button
-                      onClick={() => setTab('appointments')}
-                      style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand)', background: 'var(--brand-light)', border: '1px solid var(--brand-border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
-                    >
+                    <button onClick={() => setTab('appointments')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand)', background: 'var(--brand-light)', border: '1px solid var(--brand-border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       View All
                     </button>
                   }
@@ -568,9 +511,7 @@ export default function DoctorDashboard() {
                                 {new Date(a.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </td>
-                            <td style={{ padding: '10px 16px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                              {a.patient_name || '—'}
-                            </td>
+                            <td style={{ padding: '10px 16px', fontWeight: 500, color: 'var(--text-primary)' }}>{a.patient_name || '—'}</td>
                             <td style={{ padding: '10px 16px' }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: a.type === 'online' ? '#3b82f6' : '#8b5cf6' }}>
                                 {a.type === 'online' ? <Video size={11} strokeWidth={2} /> : <MapPin size={11} strokeWidth={2} />}
@@ -588,7 +529,6 @@ export default function DoctorDashboard() {
                     </table>
                   </div>
                 ) : (
-                  /* Fallback: static dashboard schedule */
                   data?.schedule?.length > 0 ? (
                     <Table
                       columns={['Time', 'Patient', 'Type']}
@@ -608,16 +548,14 @@ export default function DoctorDashboard() {
                 )}
               </Card>
 
-              {/* ── Right column ── */}
+              {/* Right column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-                {/* Quick-action CTA (mirrors PatientDashboard's dark CTA card) */}
+                {/* Quick-action CTA */}
                 <div style={{ background: 'var(--text-primary)', borderRadius: 12, padding: '20px 18px', boxShadow: 'var(--shadow-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <Zap size={13} color="var(--text-muted)" />
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Quick Actions
-                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Quick Actions</span>
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.35, marginBottom: 6, color: 'var(--bg-card)' }}>
                     Manage Your Patients
@@ -635,7 +573,7 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
 
-                {/* Pending Actions — all live counts, all clickable */}
+                {/* Pending Actions */}
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Pending Actions</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -665,7 +603,7 @@ export default function DoctorDashboard() {
                   </div>
                 </Card>
 
-                {/* Recent Alerts — LIVE from latest patient sessions */}
+                {/* Recent Alerts */}
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Recent Alerts</div>
                   {!sessionsLoaded ? (
@@ -688,21 +626,20 @@ export default function DoctorDashboard() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {sessionAlerts.map((s, i) => {
-                        /* Pick icon + colour based on injury_status */
                         const alertStyle = {
-                          improving:       { color: 'var(--success)', Icon: TrendingUp   },
-                          stable:          { color: 'var(--brand)',   Icon: Activity     },
-                          needs_attention: { color: 'var(--warning)', Icon: AlertCircle  },
-                          first_session:   { color: '#8b5cf6',        Icon: Activity     },
+                          improving:       { color: 'var(--success)', Icon: TrendingUp  },
+                          stable:          { color: 'var(--brand)',   Icon: Activity    },
+                          needs_attention: { color: 'var(--warning)', Icon: AlertCircle },
+                          first_session:   { color: '#8b5cf6',        Icon: Activity    },
                         }[s.injury_status] || { color: 'var(--text-muted)', Icon: Activity }
 
                         const timeAgo = (() => {
                           const diff = Date.now() - new Date(s.created_at).getTime()
                           const mins = Math.floor(diff / 60000)
-                          if (mins < 1)    return 'Just now'
-                          if (mins < 60)   return `${mins}m ago`
+                          if (mins < 1)  return 'Just now'
+                          if (mins < 60) return `${mins}m ago`
                           const hrs = Math.floor(mins / 60)
-                          if (hrs < 24)    return `${hrs}h ago`
+                          if (hrs < 24)  return `${hrs}h ago`
                           const days = Math.floor(hrs / 24)
                           return days === 1 ? 'Yesterday' : `${days}d ago`
                         })()
@@ -733,7 +670,7 @@ export default function DoctorDashboard() {
               </div>
             </div>
 
-            {/* ── Patient Monitoring Summary — LIVE ── */}
+            {/* Patient Monitoring Summary */}
             <Card noPad>
               <SectionHeader
                 title="Patient Monitoring Summary"
@@ -745,7 +682,6 @@ export default function DoctorDashboard() {
                 }
               />
               {!sessionsLoaded ? (
-                /* Skeleton rows while loading */
                 <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {[1,2,3].map(i => (
                     <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -774,7 +710,6 @@ export default function DoctorDashboard() {
                     <tbody>
                       {sessionRows.map(({ patient, latestSession }, i) => {
                         const s = latestSession
-                        /* Map injury_status → badge variant */
                         const statusMap = {
                           improving:       { label: 'Improving',    variant: 'success' },
                           stable:          { label: 'Stable',       variant: 'info'    },
@@ -783,13 +718,12 @@ export default function DoctorDashboard() {
                         }
                         const statusInfo = statusMap[s?.injury_status] || { label: 'No Data', variant: 'default' }
 
-                        /* Time since last session */
                         const timeAgo = s ? (() => {
                           const diff = Date.now() - new Date(s.created_at).getTime()
                           const mins = Math.floor(diff / 60000)
-                          if (mins < 60)   return `${mins}m ago`
+                          if (mins < 60)  return `${mins}m ago`
                           const hrs = Math.floor(mins / 60)
-                          if (hrs < 24)    return `${hrs}h ago`
+                          if (hrs < 24)   return `${hrs}h ago`
                           const days = Math.floor(hrs / 24)
                           return days === 1 ? 'Yesterday' : `${days}d ago`
                         })() : '—'
@@ -803,12 +737,8 @@ export default function DoctorDashboard() {
                               <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{patient.name}</div>
                               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{patient.email}</div>
                             </td>
-                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {patient.condition || patient.injuryType || '—'}
-                            </td>
-                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
-                              {timeAgo}
-                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{patient.condition || patient.injuryType || '—'}</td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{timeAgo}</td>
                             <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
                               {s ? `${s.avg_angle.toFixed(1)}°` : '—'}
                             </td>
@@ -816,10 +746,7 @@ export default function DoctorDashboard() {
                               {s ? <ProgressBar value={s.accuracy} max={100} /> : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>}
                             </td>
                             <td style={{ padding: '12px 16px' }}>
-                              {s
-                                ? <Badge label={statusInfo.label} variant={statusInfo.variant} />
-                                : <Badge label="No Sessions" variant="default" />
-                              }
+                              {s ? <Badge label={statusInfo.label} variant={statusInfo.variant} /> : <Badge label="No Sessions" variant="default" />}
                             </td>
                           </tr>
                         )
@@ -830,7 +757,6 @@ export default function DoctorDashboard() {
               )}
             </Card>
 
-            {/* ── Bottom shortcut ── */}
             <button onClick={() => setTab('patients')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'space-between', boxShadow: 'var(--shadow-sm)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Users size={14} color="var(--text-muted)" strokeWidth={2} />
@@ -933,11 +859,14 @@ export default function DoctorDashboard() {
 
 /* ── PatientCard ─────────────────────────────────────────────────── */
 function PatientCard({ patient, onMessage }) {
-  const initials  = (patient.name || '').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
-  const sev       = patient.injurySeverity
-  const sevColor  = sev === 'Severe'   ? { bg:'var(--danger-bg)',  border:'var(--danger-border)',  color:'var(--danger)'  }
-    : sev === 'Moderate'               ? { bg:'var(--warning-bg)', border:'var(--warning-border)', color:'var(--warning)' }
-    :                                    { bg:'var(--success-bg)', border:'var(--success-border)', color:'var(--success)' }
+  const initials = (patient.name || '').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()
+  const sev      = patient.injurySeverity
+  const sevColor = sev === 'Severe'
+    ? { bg:'var(--danger-bg)',  border:'var(--danger-border)',  color:'var(--danger)'  }
+    : sev === 'Moderate'
+    ? { bg:'var(--warning-bg)', border:'var(--warning-border)', color:'var(--warning)' }
+    : { bg:'var(--success-bg)', border:'var(--success-border)', color:'var(--success)' }
+
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>

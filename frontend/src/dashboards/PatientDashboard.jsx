@@ -1,13 +1,5 @@
 /**
  * PatientDashboard.jsx
- *
- * Changes vs previous version:
- *  1. "Health Score" stat card replaced with "Total Sessions" (live rehab session count).
- *  2. "Active Prescriptions" stat card shows a LIVE count from GET /api/patient/my-exercises.
- *  3. "Upcoming Appointments" stat card is clickable — navigates to appointments tab.
- *  4. New "appointments" tab renders BookAppointmentPanel.
- *  5. pendingAppts state tracks unconfirmed appointment count for sidebar badge.
- *  6. DashboardLayout receives pendingAppts prop for the Appointments sidebar badge.
  */
 
 import { useState, useEffect } from 'react'
@@ -194,6 +186,13 @@ export default function PatientDashboard() {
   const [pendingAppts,   setPendingAppts]   = useState(0)
   const [liveAppts,      setLiveAppts]      = useState(null)
 
+  // ── Listen for Navbar profile/settings clicks ──
+  useEffect(() => {
+    const handler = (e) => setTab(e.detail.tab)
+    window.addEventListener('navbar:tabchange', handler)
+    return () => window.removeEventListener('navbar:tabchange', handler)
+  }, [])
+
   /* ── Dashboard data ── */
   useEffect(() => {
     api.get('/patient/dashboard')
@@ -258,7 +257,7 @@ export default function PatientDashboard() {
       })
   }, [user])
 
-  /* ── Total sessions count (uses rehabPatient.id once available) ── */
+  /* ── Total sessions count ── */
   const { totalSessions, totalSessionsLoaded } = useTotalSessions(rehabPatient?.id)
 
   const patientForRehab = rehabPatient
@@ -362,8 +361,6 @@ export default function PatientDashboard() {
             <>
               {/* ── Stat cards ── */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-
-                {/* Upcoming Appointments */}
                 <StatCard
                   label="Upcoming Appointments"
                   value={appointments.filter(a => ['confirmed', 'Confirmed', 'pending', 'Pending'].includes(a.status)).length}
@@ -371,8 +368,6 @@ export default function PatientDashboard() {
                   color="#3b82f6"
                   onClick={() => setTab('appointments')}
                 />
-
-                {/* Active Prescriptions */}
                 <StatCard
                   label="Active Prescriptions"
                   value={prescriptionCount}
@@ -380,8 +375,6 @@ export default function PatientDashboard() {
                   color="#8b5cf6"
                   loading={!prescriptionLoaded}
                 />
-
-                {/* ── REPLACED: Total Sessions (was Health Score) ── */}
                 <StatCard
                   label="Total Sessions"
                   value={totalSessionsLoaded ? totalSessions : (rehabPatient ? undefined : 0)}
@@ -540,9 +533,7 @@ export default function PatientDashboard() {
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CalendarDays size={14} color="#3b82f6" strokeWidth={2} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        Appointments
-                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Appointments</span>
                       {pendingAppts > 0 && (
                         <span style={{ marginLeft: 'auto', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
                           {pendingAppts} pending
@@ -568,9 +559,7 @@ export default function PatientDashboard() {
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Pill size={14} color="#8b5cf6" strokeWidth={2} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                        My Prescriptions
-                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>My Prescriptions</span>
                       {prescriptionLoaded && prescriptionCount > 0 && (
                         <span style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
                           {prescriptionCount}

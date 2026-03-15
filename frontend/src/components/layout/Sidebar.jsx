@@ -1,17 +1,13 @@
 /**
- * Sidebar.jsx — fully updated for all three roles
- *
- * Changes:
- *  - Patient: Appointments nav item (CalendarDays) with pending badge
- *  - Doctor:  Appointments nav item (CalendarDays) with pending badge
- *  - Admin:   Appointments nav item (CalendarDays) with total appt badge
- *  - All roles: notifications badge support via unreadNotifs prop
+ * Sidebar.jsx — updated
+ * - Logo is now clickable → navigates to 'overview' (dashboard)
+ * - Logo uses Layers icon with dark/neutral color (no blue)
  */
 
 import { useState } from 'react'
 import {
   Activity, Users, Home, Play, Clock, FileText,
-  Settings, ChevronRight, Heart, User, MessageSquare,
+  Settings, ChevronRight, Layers, User, MessageSquare,
   BarChart2, Shield, FlaskConical, ChevronDown, Dumbbell, Pill,
   CalendarDays, Bell,
 } from 'lucide-react'
@@ -23,7 +19,7 @@ const NAV_ITEMS = {
     { id: 'monitor',       label: 'Rehab Monitor',   icon: Play          },
     { id: 'history',       label: 'Session History', icon: Clock         },
     { id: 'prescriptions', label: 'Prescriptions',   icon: Pill          },
-    { id: 'appointments',  label: 'Appointments',    icon: CalendarDays  },   // ← NEW
+    { id: 'appointments',  label: 'Appointments',    icon: CalendarDays  },
     { id: 'messages',      label: 'Messages',        icon: MessageSquare },
     { id: 'profile',       label: 'Profile',         icon: User          },
     { id: 'settings',      label: 'Settings',        icon: Settings      },
@@ -31,7 +27,7 @@ const NAV_ITEMS = {
   doctor: [
     { id: 'overview',     label: 'Overview',    icon: Home          },
     { id: 'patients',     label: 'My Patients', icon: Users         },
-    { id: 'appointments', label: 'Appointments', icon: CalendarDays  },   // ← NEW
+    { id: 'appointments', label: 'Appointments', icon: CalendarDays  },
     { id: 'messages',     label: 'Messages',    icon: MessageSquare },
     {
       id: 'analysis_assignment',
@@ -68,12 +64,9 @@ const SUB_IDS = ['report_analysis', 'exercise_assignment']
  *  role           – 'patient' | 'doctor' | 'admin'
  *  activeTab      – current active tab id
  *  onTabChange    – (tabId: string) => void
- *  unreadMessages – number badge on Messages  (patient/doctor)
- *  pendingAppts   – number badge on Appointments:
- *                     doctor  → pending appointment requests
- *                     patient → appointments awaiting confirmation
- *                     admin   → total appointments on the platform
- *  unreadNotifs   – number badge on Notifications (admin only, future use)
+ *  unreadMessages – number badge on Messages
+ *  pendingAppts   – number badge on Appointments
+ *  unreadNotifs   – number badge on System Activity (admin)
  */
 export default function Sidebar({ role = 'patient', activeTab, onTabChange, unreadMessages = 0, pendingAppts = 0, unreadNotifs = 0 }) {
   const { isDark } = useTheme()
@@ -81,6 +74,7 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
   const meta       = ROLE_META[role] || ROLE_META.patient
   const RoleIcon   = meta.Icon
   const [expanded, setExpanded] = useState(SUB_IDS.includes(activeTab))
+  const [logoHovered, setLogoHovered] = useState(false)
 
   const btnStyle = (active) => ({
     display: 'flex', alignItems: 'center', gap: '0.625rem',
@@ -106,21 +100,59 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
       boxShadow: isDark ? '1px 0 0 rgba(255,255,255,0.04)' : '1px 0 0 #f1f5f9',
     }}>
 
-      {/* Logo */}
-      <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+      {/* ── Logo (clickable → overview/dashboard) ── */}
+      <button
+        onClick={() => onTabChange('overview')}
+        onMouseEnter={() => setLogoHovered(true)}
+        onMouseLeave={() => setLogoHovered(false)}
+        title="Go to Dashboard"
+        aria-label="Go to Dashboard"
+        style={{
+          padding: '1.25rem',
+          display: 'flex', alignItems: 'center', gap: '0.625rem',
+          background: 'none',
+          borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+          borderBottom: '1px solid var(--border)',
+          cursor: 'pointer', fontFamily: 'inherit',
+          width: '100%', textAlign: 'left',
+          borderRadius: 0,
+          transition: 'background 0.15s ease',
+          backgroundColor: logoHovered
+            ? (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)')
+            : 'transparent',
+        }}
+      >
+        {/* Icon box — dark neutral, no blue */}
         <div style={{
           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-          background: isDark ? 'linear-gradient(135deg,#1d4ed8,#3b82f6)' : '#0f172a',
+          background: isDark ? '#1e1e2e' : '#1a1a2e',
+          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.12)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: isDark ? '0 0 12px rgba(59,130,246,0.4)' : 'none',
+          boxShadow: logoHovered
+            ? (isDark ? '0 2px 12px rgba(0,0,0,0.5)' : '0 2px 10px rgba(0,0,0,0.25)')
+            : 'none',
+          transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+          transform: logoHovered ? 'scale(1.06)' : 'scale(1)',
         }}>
-          <Heart size={15} color="#fff" strokeWidth={2.5} />
+          <Layers size={15} color="#e2e8f0" strokeWidth={2} />
         </div>
+
+        {/* Text */}
         <div>
-          <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>MedRehab</div>
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Platform</div>
+          <div style={{
+            fontSize: '0.875rem', fontWeight: 700,
+            color: 'var(--text-primary)', letterSpacing: '-0.01em',
+          }}>
+            RehabMonitor
+          </div>
+          <div style={{
+            fontSize: '0.6rem', color: 'var(--text-muted)',
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>
+            Platform
+          </div>
         </div>
-      </div>
+      </button>
 
       {/* Role badge */}
       <div style={{ padding: '0.625rem 1rem', borderBottom: '1px solid var(--border-light)' }}>
@@ -146,13 +178,11 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
           const isGroupActive = hasSubItems && SUB_IDS.includes(activeTab)
           const isActive      = !hasSubItems && activeTab === item.id
 
-          // badge logic
           let badge = 0
           if (item.id === 'messages')     badge = unreadMessages
           if (item.id === 'appointments') badge = pendingAppts
-          if (item.id === 'activity')     badge = unreadNotifs   // admin: unread notification count
+          if (item.id === 'activity')     badge = unreadNotifs
 
-          /* expandable group */
           if (hasSubItems) return (
             <div key={item.id}>
               <button
@@ -189,7 +219,6 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
             </div>
           )
 
-          /* regular item */
           return (
             <button key={item.id} onClick={() => onTabChange(item.id)}
               style={btnStyle(isActive)}
