@@ -1,10 +1,11 @@
 /**
- * Sidebar.jsx — updated with Appointments nav items
+ * Sidebar.jsx — fully updated for all three roles
  *
  * Changes:
- *  - Patient: new "Appointments" nav item (CalendarDays icon)
- *  - Doctor:  new "Appointments" nav item (CalendarDays icon)
- *  - Both show a badge when there are pending appointment notifications
+ *  - Patient: Appointments nav item (CalendarDays) with pending badge
+ *  - Doctor:  Appointments nav item (CalendarDays) with pending badge
+ *  - Admin:   Appointments nav item (CalendarDays) with total appt badge
+ *  - All roles: notifications badge support via unreadNotifs prop
  */
 
 import { useState } from 'react'
@@ -12,7 +13,7 @@ import {
   Activity, Users, Home, Play, Clock, FileText,
   Settings, ChevronRight, Heart, User, MessageSquare,
   BarChart2, Shield, FlaskConical, ChevronDown, Dumbbell, Pill,
-  CalendarDays,
+  CalendarDays, Bell,
 } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
@@ -45,11 +46,12 @@ const NAV_ITEMS = {
     { id: 'settings', label: 'Settings', icon: Settings },
   ],
   admin: [
-    { id: 'overview', label: 'Overview',        icon: Home     },
-    { id: 'users',    label: 'User Management', icon: Users    },
-    { id: 'activity', label: 'System Activity', icon: Activity },
-    { id: 'settings', label: 'Settings',        icon: Settings },
-    { id: 'profile',  label: 'Profile',         icon: User     },
+    { id: 'overview',     label: 'Overview',        icon: Home         },
+    { id: 'users',        label: 'User Management', icon: Users        },
+    { id: 'appointments', label: 'Appointments',    icon: CalendarDays },
+    { id: 'activity',     label: 'System Activity', icon: Activity     },
+    { id: 'settings',     label: 'Settings',        icon: Settings     },
+    { id: 'profile',      label: 'Profile',         icon: User         },
   ],
 }
 
@@ -63,14 +65,17 @@ const SUB_IDS = ['report_analysis', 'exercise_assignment']
 
 /**
  * Props:
- *  role              – 'patient' | 'doctor' | 'admin'
- *  activeTab         – current active tab id
- *  onTabChange       – (tabId: string) => void
- *  unreadMessages    – number badge on Messages
- *  pendingAppts      – number badge on Appointments (pending requests for doctor,
- *                      or unread appt notifications for patient)
+ *  role           – 'patient' | 'doctor' | 'admin'
+ *  activeTab      – current active tab id
+ *  onTabChange    – (tabId: string) => void
+ *  unreadMessages – number badge on Messages  (patient/doctor)
+ *  pendingAppts   – number badge on Appointments:
+ *                     doctor  → pending appointment requests
+ *                     patient → appointments awaiting confirmation
+ *                     admin   → total appointments on the platform
+ *  unreadNotifs   – number badge on Notifications (admin only, future use)
  */
-export default function Sidebar({ role = 'patient', activeTab, onTabChange, unreadMessages = 0, pendingAppts = 0 }) {
+export default function Sidebar({ role = 'patient', activeTab, onTabChange, unreadMessages = 0, pendingAppts = 0, unreadNotifs = 0 }) {
   const { isDark } = useTheme()
   const items      = NAV_ITEMS[role] || NAV_ITEMS.patient
   const meta       = ROLE_META[role] || ROLE_META.patient
@@ -145,6 +150,7 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
           let badge = 0
           if (item.id === 'messages')     badge = unreadMessages
           if (item.id === 'appointments') badge = pendingAppts
+          if (item.id === 'activity')     badge = unreadNotifs   // admin: unread notification count
 
           /* expandable group */
           if (hasSubItems) return (
@@ -205,7 +211,10 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
       </nav>
 
       <div style={{ padding: '0.875rem 1.25rem', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>MedRehab Platform v2.0</div>
+        <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', marginBottom: 2 }}>MedRehab Platform v2.0</div>
+        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {role === 'admin' ? 'Administrator' : role === 'doctor' ? 'Physician' : 'Patient'} Access
+        </div>
       </div>
     </aside>
   )

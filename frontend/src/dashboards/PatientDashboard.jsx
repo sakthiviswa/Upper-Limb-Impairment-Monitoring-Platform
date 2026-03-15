@@ -2,11 +2,12 @@
  * PatientDashboard.jsx
  *
  * Changes vs previous version:
- *  1. "Active Prescriptions" stat card shows a LIVE count from GET /api/patient/my-exercises.
- *  2. "Upcoming Appointments" stat card is clickable — navigates to appointments tab.
- *  3. New "appointments" tab renders BookAppointmentPanel.
- *  4. pendingAppts state tracks unconfirmed appointment count for sidebar badge.
- *  5. DashboardLayout receives pendingAppts prop for the Appointments sidebar badge.
+ *  1. "Health Score" stat card replaced with "Total Sessions" (live rehab session count).
+ *  2. "Active Prescriptions" stat card shows a LIVE count from GET /api/patient/my-exercises.
+ *  3. "Upcoming Appointments" stat card is clickable — navigates to appointments tab.
+ *  4. New "appointments" tab renders BookAppointmentPanel.
+ *  5. pendingAppts state tracks unconfirmed appointment count for sidebar badge.
+ *  6. DashboardLayout receives pendingAppts prop for the Appointments sidebar badge.
  */
 
 import { useState, useEffect } from 'react'
@@ -24,9 +25,9 @@ import PrescriptionsPanel   from '../components/PrescriptionsPanel'
 import BookAppointmentPanel from '../components/BookAppointmentPanel'
 import { useToast }    from '../components/ToastProvider'
 import {
-  CalendarDays, Pill, Heart, Play, Activity, FileText,
+  CalendarDays, Pill, Activity, Play, FileText,
   Clock, AlertCircle, TrendingUp, ChevronRight, Zap, Bell,
-  CheckCircle, Video, MapPin, ExternalLink, Plus,
+  CheckCircle, Video, MapPin, Plus, BarChart2,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -62,6 +63,30 @@ function usePrescriptionCount(fallback = 0) {
   return {
     prescriptionCount:  count !== null ? count : fallback,
     prescriptionLoaded: loaded,
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   HOOK – live total rehab session count
+───────────────────────────────────────────────────────────────────── */
+function useTotalSessions(rehabPatientId) {
+  const [count,  setCount]  = useState(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!rehabPatientId) return
+    rehabApi.get(`/api/sessions?patient_id=${rehabPatientId}`)
+      .then(r => {
+        const sessions = r.data?.sessions ?? r.data ?? []
+        setCount(Array.isArray(sessions) ? sessions.length : 0)
+      })
+      .catch(() => setCount(0))
+      .finally(() => setLoaded(true))
+  }, [rehabPatientId])
+
+  return {
+    totalSessions:       count ?? 0,
+    totalSessionsLoaded: loaded,
   }
 }
 
@@ -167,7 +192,6 @@ export default function PatientDashboard() {
   const [unreadCount,    setUnreadCount]    = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [pendingAppts,   setPendingAppts]   = useState(0)
-  // Live appointments from backend (used for the overview table)
   const [liveAppts,      setLiveAppts]      = useState(null)
 
   /* ── Dashboard data ── */
@@ -190,19 +214,15 @@ export default function PatientDashboard() {
       .catch(() => setError('Failed to load dashboard data.'))
       .finally(() => setLoading(false))
 
-    // Fetch live appointments for sidebar badge + overview table
     api.get('/appointments')
       .then(r => {
         const appts = r.data.appointments || []
         setLiveAppts(appts)
-        // "pending" for patient = awaiting doctor confirmation
-        const pending = appts.filter(a => a.status === 'pending').length
-        setPendingAppts(pending)
+        setPendingAppts(appts.filter(a => a.status === 'pending').length)
       })
       .catch(() => {})
   }, [])
 
-  // Refresh appointment badge when leaving appointments tab
   useEffect(() => {
     if (tab === 'appointments') return
     api.get('/appointments')
@@ -238,6 +258,9 @@ export default function PatientDashboard() {
       })
   }, [user])
 
+  /* ── Total sessions count (uses rehabPatient.id once available) ── */
+  const { totalSessions, totalSessionsLoaded } = useTotalSessions(rehabPatient?.id)
+
   const patientForRehab = rehabPatient
     ? {
         ...user,
@@ -247,7 +270,6 @@ export default function PatientDashboard() {
       }
     : null
 
-  // Combined appointments: live ones take priority, fall back to dashData
   const appointments = liveAppts ?? dashData?.appointments ?? []
 
   if (loading) return <LoadingScreen />
@@ -261,7 +283,6 @@ export default function PatientDashboard() {
       unreadMessages={unreadMessages}
       pendingAppts={pendingAppts}
     >
-      {/* shimmer keyframe */}
       <style>{`
         @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
@@ -274,7 +295,7 @@ export default function PatientDashboard() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
-                Good morning, {user?.name?.split(' ')[0]}
+                Hello, {user?.name?.split(' ')[0]}
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
                 Here's your rehabilitation status overview
@@ -341,7 +362,8 @@ export default function PatientDashboard() {
             <>
               {/* ── Stat cards ── */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-                {/* Clickable — goes to appointments tab */}
+
+                {/* Upcoming Appointments */}
                 <StatCard
                   label="Upcoming Appointments"
                   value={appointments.filter(a => ['confirmed', 'Confirmed', 'pending', 'Pending'].includes(a.status)).length}
@@ -349,6 +371,8 @@ export default function PatientDashboard() {
                   color="#3b82f6"
                   onClick={() => setTab('appointments')}
                 />
+
+                {/* Active Prescriptions */}
                 <StatCard
                   label="Active Prescriptions"
                   value={prescriptionCount}
@@ -356,16 +380,21 @@ export default function PatientDashboard() {
                   color="#8b5cf6"
                   loading={!prescriptionLoaded}
                 />
+
+                {/* ── REPLACED: Total Sessions (was Health Score) ── */}
                 <StatCard
-                  label="Health Score"
-                  value={dashData.health_score}
-                  icon={Heart}
-                  color="#ef4444"
+                  label="Total Sessions"
+                  value={totalSessionsLoaded ? totalSessions : (rehabPatient ? undefined : 0)}
+                  icon={BarChart2}
+                  color="#10b981"
+                  loading={!!rehabPatient && !totalSessionsLoaded}
+                  onClick={() => setTab('history')}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: 14 }}>
-                {/* Appointments table — live data with Meet link support */}
+
+                {/* Appointments table */}
                 <Card noPad>
                   <SectionHeader
                     title="Upcoming Appointments"
@@ -476,6 +505,7 @@ export default function PatientDashboard() {
 
                 {/* Side column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
                   {/* Start session CTA */}
                   <div style={{ background: 'var(--text-primary)', borderRadius: 12, padding: '20px 18px', boxShadow: 'var(--shadow-md)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>

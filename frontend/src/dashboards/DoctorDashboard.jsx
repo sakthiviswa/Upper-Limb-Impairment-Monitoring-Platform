@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../utils/api'
+import rehabApi from '../utils/rehabApi'
 import DashboardLayout from '../components/layout/DashboardLayout'
 import NotificationsPanel from '../components/NotificationsPanel'
 import ProfileSettings from '../components/ProfileSettings'
@@ -17,7 +18,7 @@ import DoctorAppointmentsPanel from '../components/DoctorAppointmentsPanel'
 import { useToast } from '../components/ToastProvider'
 import {
   Users, ClipboardList, Activity, CheckCircle, MessageSquare,
-  Bell, AlertCircle, UserPlus, TrendingUp, BarChart2,
+  Bell, AlertCircle, UserPlus, TrendingUp, TrendingDown, BarChart2,
   Check, X, Mail, Shield, Star,
   User, Stethoscope, Award, MapPin, Globe, GraduationCap,
   Building2, BadgeCheck, CalendarDays, Video, Clock,
@@ -80,6 +81,56 @@ function useLiveAppointmentCounts() {
     appointments:  appts,
     refetchAppts:  fetch,
   }
+}
+
+/**
+ * For each accepted patient, fetches their latest session from
+ * GET /api/sessions/patient/{id} (rehabApi — the rehab microservice).
+ * Returns a flat list of { patient, latestSession } objects sorted by
+ * most-recent session first, plus the 5 most-recent sessions as alerts.
+ */
+function useLivePatientSessions(acceptedPatients) {
+  const [rows,    setRows]    = useState([])
+  const [alerts,  setAlerts]  = useState([])
+  const [loaded,  setLoaded]  = useState(false)
+
+  useEffect(() => {
+    if (!acceptedPatients || acceptedPatients.length === 0) {
+      setRows([]); setAlerts([]); setLoaded(true); return
+    }
+
+    // Fetch latest session for every accepted patient in parallel
+    const fetches = acceptedPatients.map(p =>
+      rehabApi.get(`/api/sessions/patient/${p.rehab_patient_id || p.id}`)
+        .then(r => {
+          const sessions = r.data || []
+          const latest   = sessions[0] || null   // already ordered desc by router
+          return { patient: p, latestSession: latest, allSessions: sessions }
+        })
+        .catch(() => ({ patient: p, latestSession: null, allSessions: [] }))
+    )
+
+    Promise.all(fetches).then(results => {
+      // Sort: patients with most-recent session first
+      const sorted = results.sort((a, b) => {
+        if (!a.latestSession) return 1
+        if (!b.latestSession) return -1
+        return new Date(b.latestSession.created_at) - new Date(a.latestSession.created_at)
+      })
+      setRows(sorted)
+
+      // Build recent-alerts list: take the 5 latest sessions across all patients
+      const allLatest = results
+        .filter(r => r.latestSession)
+        .map(r => ({ ...r.latestSession, patientName: r.patient.name }))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+      setAlerts(allLatest)
+      setLoaded(true)
+    })
+  }, [acceptedPatients?.length])   // re-run when patient list grows/shrinks
+
+  return { sessionRows: rows, sessionAlerts: alerts, sessionsLoaded: loaded }
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -275,6 +326,16 @@ export default function DoctorDashboard() {
   const {
     pendingAppts, upcomingAppts, apptLoaded, appointments, refetchAppts,
   } = useLiveAppointmentCounts()
+
+  /* ── accepted patients for session hook (fetched once on mount) ── */
+  const [mountedAccepted, setMountedAccepted] = useState([])
+  useEffect(() => {
+    api.get('/doctor/accepted-patients')
+      .then(r => setMountedAccepted(r.data.patients || []))
+      .catch(() => {})
+  }, [])
+
+  const { sessionRows, sessionAlerts, sessionsLoaded } = useLivePatientSessions(mountedAccepted)
 
   /* ── Dashboard data ── */
   useEffect(() => {
@@ -604,47 +665,169 @@ export default function DoctorDashboard() {
                   </div>
                 </Card>
 
-                {/* Recent Alerts */}
+                {/* Recent Alerts — LIVE from latest patient sessions */}
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Recent Alerts</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[
-                      { text: 'Sarah M. completed rehab session', time: '12 min ago', color: 'var(--success)', Icon: Activity    },
-                      { text: 'New angle detection report',       time: '1 hr ago',   color: 'var(--brand)',   Icon: BarChart2   },
-                      { text: 'Appointment request from James L.',time: '3 hr ago',   color: 'var(--warning)', Icon: CalendarDays},
-                    ].map((n, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, paddingBottom: 10, borderBottom: i < 2 ? '1px solid var(--border-light)' : 'none' }}>
-                        <n.Icon size={13} color={n.color} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
-                        <div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>{n.text}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{n.time}</div>
+                  {!sessionsLoaded ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {[1,2,3].map(i => (
+                        <div key={i} style={{ display: 'flex', gap: 8 }}>
+                          <div style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--border)', flexShrink: 0, marginTop: 2, animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ width: '80%', height: 12, borderRadius: 4, background: 'var(--border)', marginBottom: 5, animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                            <div style={{ width: '40%', height: 10, borderRadius: 4, background: 'var(--border)', animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : sessionAlerts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                      <Activity size={20} strokeWidth={1} style={{ marginBottom: 6, opacity: 0.2, color: 'var(--text-muted)' }} />
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No sessions recorded yet</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {sessionAlerts.map((s, i) => {
+                        /* Pick icon + colour based on injury_status */
+                        const alertStyle = {
+                          improving:       { color: 'var(--success)', Icon: TrendingUp   },
+                          stable:          { color: 'var(--brand)',   Icon: Activity     },
+                          needs_attention: { color: 'var(--warning)', Icon: AlertCircle  },
+                          first_session:   { color: '#8b5cf6',        Icon: Activity     },
+                        }[s.injury_status] || { color: 'var(--text-muted)', Icon: Activity }
+
+                        const timeAgo = (() => {
+                          const diff = Date.now() - new Date(s.created_at).getTime()
+                          const mins = Math.floor(diff / 60000)
+                          if (mins < 1)    return 'Just now'
+                          if (mins < 60)   return `${mins}m ago`
+                          const hrs = Math.floor(mins / 60)
+                          if (hrs < 24)    return `${hrs}h ago`
+                          const days = Math.floor(hrs / 24)
+                          return days === 1 ? 'Yesterday' : `${days}d ago`
+                        })()
+
+                        const statusLabel = {
+                          improving:       'completed session — improving',
+                          stable:          'completed session — stable',
+                          needs_attention: 'session flagged — needs review',
+                          first_session:   'completed first session',
+                        }[s.injury_status] || 'completed a session'
+
+                        return (
+                          <div key={i} style={{ display: 'flex', gap: 8, paddingBottom: 10, borderBottom: i < sessionAlerts.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                            <alertStyle.Icon size={13} color={alertStyle.color} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />
+                            <div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                                <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{s.patientName}</strong> {statusLabel}
+                                {' · '}<span style={{ fontVariantNumeric: 'tabular-nums' }}>{s.avg_angle.toFixed(1)}° avg</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{timeAgo}</div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
 
-            {/* ── Patient Monitoring Summary ── */}
+            {/* ── Patient Monitoring Summary — LIVE ── */}
             <Card noPad>
               <SectionHeader
                 title="Patient Monitoring Summary"
-                subtitle="AI angle detection & rehab progress"
+                subtitle={sessionsLoaded ? `${sessionRows.filter(r => r.latestSession).length} of ${sessionRows.length} patient${sessionRows.length !== 1 ? 's' : ''} have session data` : 'Loading…'}
                 action={
                   <button onClick={() => setTab('report_analysis')} style={{ fontSize: 12, fontWeight: 600, color: 'var(--brand)', background: 'var(--brand-light)', border: '1px solid var(--brand-border)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>
                     View All Reports
                   </button>
                 }
               />
-              <Table
-                columns={['Patient', 'Condition', 'Last Session', 'Avg Angle', 'Progress', 'Status']}
-                rows={[
-                  ['Sarah Mitchell', 'Shoulder Rehab', '2 days ago', '78°', <ProgressBar value={78} max={90} />, <Badge label="Improving"    variant="success" />],
-                  ['James Liu',      'Elbow Rehab',    'Today',      '65°', <ProgressBar value={65} max={90} />, <Badge label="On Track"     variant="info"    />],
-                  ['Maria Garcia',   'Knee Rehab',     '5 days ago', '42°', <ProgressBar value={42} max={90} />, <Badge label="Needs Review" variant="warning" />],
-                ].map(r => r.map((cell, i) => i === 0 ? <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{cell}</span> : cell))}
-              />
+              {!sessionsLoaded ? (
+                /* Skeleton rows while loading */
+                <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[1,2,3].map(i => (
+                    <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ width: 120, height: 14, borderRadius: 4, background: 'var(--border)', animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                      <div style={{ width: 90,  height: 14, borderRadius: 4, background: 'var(--border)', animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                      <div style={{ width: 70,  height: 14, borderRadius: 4, background: 'var(--border)', animation: 'shimmer 1.2s ease-in-out infinite' }} />
+                      <div style={{ width: 100, height: 8,  borderRadius: 99, background: 'var(--border)', animation: 'shimmer 1.2s ease-in-out infinite', flex: 1 }} />
+                    </div>
+                  ))}
+                </div>
+              ) : sessionRows.length === 0 ? (
+                <div style={{ padding: '2.5rem', textAlign: 'center' }}>
+                  <Activity size={24} strokeWidth={1} style={{ marginBottom: 8, opacity: 0.2, color: 'var(--text-muted)' }} />
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>No patient sessions yet</div>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        {['Patient', 'Condition', 'Last Session', 'Avg Angle', 'Accuracy', 'Status'].map(h => (
+                          <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessionRows.map(({ patient, latestSession }, i) => {
+                        const s = latestSession
+                        /* Map injury_status → badge variant */
+                        const statusMap = {
+                          improving:       { label: 'Improving',    variant: 'success' },
+                          stable:          { label: 'Stable',       variant: 'info'    },
+                          needs_attention: { label: 'Needs Review', variant: 'warning' },
+                          first_session:   { label: 'First Session',variant: 'purple'  },
+                        }
+                        const statusInfo = statusMap[s?.injury_status] || { label: 'No Data', variant: 'default' }
+
+                        /* Time since last session */
+                        const timeAgo = s ? (() => {
+                          const diff = Date.now() - new Date(s.created_at).getTime()
+                          const mins = Math.floor(diff / 60000)
+                          if (mins < 60)   return `${mins}m ago`
+                          const hrs = Math.floor(mins / 60)
+                          if (hrs < 24)    return `${hrs}h ago`
+                          const days = Math.floor(hrs / 24)
+                          return days === 1 ? 'Yesterday' : `${days}d ago`
+                        })() : '—'
+
+                        return (
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{patient.name}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{patient.email}</div>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {patient.condition || patient.injuryType || '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
+                              {timeAgo}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+                              {s ? `${s.avg_angle.toFixed(1)}°` : '—'}
+                            </td>
+                            <td style={{ padding: '12px 16px', minWidth: 120 }}>
+                              {s ? <ProgressBar value={s.accuracy} max={100} /> : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>}
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              {s
+                                ? <Badge label={statusInfo.label} variant={statusInfo.variant} />
+                                : <Badge label="No Sessions" variant="default" />
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </Card>
 
             {/* ── Bottom shortcut ── */}
