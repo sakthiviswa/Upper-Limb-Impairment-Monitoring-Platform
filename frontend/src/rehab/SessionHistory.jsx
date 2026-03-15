@@ -1,6 +1,7 @@
 /**
  * SessionHistory.jsx — fully theme-aware via CSS variables
  * Updated: SendReportButton integrated into each SessionCard
+ * Fixed: PDF download now uses proper API endpoint instead of static path
  */
 
 import { useState, useEffect } from 'react'
@@ -18,6 +19,9 @@ const STATUS_CFG = {
   needs_attention: { color: '#ef4444', label: 'Needs Attention' },
   first_session:   { color: '#94a3b8', label: 'First Session'   },
 }
+
+// ── Change this if your FastAPI runs on a different port ──────────────────────
+const API_BASE = 'http://localhost:8000'
 
 function StatusBadge({ status }) {
   const c = STATUS_CFG[status] || STATUS_CFG.stable
@@ -147,12 +151,13 @@ function SessionCard({ s, patient }) {
             </div>
           )}
 
-          {/* PDF download */}
+          {/* ── FIXED: PDF download uses /api/reports/{id}/download ── */}
           {s.pdf_path
             ? (
               <a
-                href={`/rehab/outputs/reports/${s.pdf_path.split('/').pop()}`}
-                download target="_blank" rel="noreferrer"
+                href={`${API_BASE}/api/reports/${s.id}/download`}
+                target="_blank"
+                rel="noreferrer"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '10px 0', background: 'var(--bg-card2)', color: 'var(--text-secondary)',
@@ -175,7 +180,7 @@ function SessionCard({ s, patient }) {
             )
           }
 
-          {/* ── NEW: Send to Doctor button ── */}
+          {/* ── Send to Doctor button ── */}
           <SendReportButton
             session={s}
             doctorEmail={patient?.doctor_email || ''}
@@ -396,11 +401,17 @@ export default function SessionHistory({ patient }) {
                     <td style={{ padding: '11px 16px', fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: s.angle_delta > 0 ? 'var(--success)' : s.angle_delta < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
                       {s.angle_delta > 0 ? '+' : ''}{s.angle_delta}°
                     </td>
+
+                    {/* ── FIXED: PDF download uses /api/reports/{id}/download ── */}
                     <td style={{ padding: '11px 16px' }}>
                       {s.pdf_path
                         ? (
-                          <a href={`/rehab/outputs/reports/${s.pdf_path.split('/').pop()}`} download target="_blank" rel="noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--brand)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                          <a
+                            href={`${API_BASE}/api/reports/${s.id}/download`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--brand)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
+                          >
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                               <polyline points="7 10 12 15 17 10"/>
@@ -412,7 +423,8 @@ export default function SessionHistory({ patient }) {
                         : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
                       }
                     </td>
-                    {/* ── NEW: inline Send button in table ── */}
+
+                    {/* ── Send button in table ── */}
                     <td style={{ padding: '8px 16px' }}>
                       <SendReportButton session={s} doctorEmail={patient?.doctor_email || ''} />
                     </td>
