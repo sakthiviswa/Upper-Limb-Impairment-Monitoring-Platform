@@ -2,11 +2,11 @@
  * PatientDashboard.jsx
  *
  * Changes vs previous version:
- *  1. "Active Prescriptions" stat card now shows a LIVE count fetched from
- *     GET /api/patient/my-exercises  (same endpoint as PrescriptionsPanel).
- *     The count updates whenever the dashboard loads, reflecting actual DB data.
- *  2. A dedicated usePrescriptionCount() hook keeps the stat in sync without
- *     coupling the overview tab to the full PrescriptionsPanel component.
+ *  1. "Active Prescriptions" stat card shows a LIVE count from GET /api/patient/my-exercises.
+ *  2. "Upcoming Appointments" stat card is clickable — navigates to appointments tab.
+ *  3. New "appointments" tab renders BookAppointmentPanel.
+ *  4. pendingAppts state tracks unconfirmed appointment count for sidebar badge.
+ *  5. DashboardLayout receives pendingAppts prop for the Appointments sidebar badge.
  */
 
 import { useState, useEffect } from 'react'
@@ -14,18 +14,19 @@ import { useLocation } from 'react-router-dom'
 import { useAuth }     from '../context/AuthContext'
 import api             from '../utils/api'
 import rehabApi        from '../utils/rehabApi'
-import MonitoringSession  from '../rehab/MonitoringSession'
-import SessionHistory     from '../rehab/SessionHistory'
-import DashboardLayout    from '../components/layout/DashboardLayout'
-import NotificationsPanel from '../components/NotificationsPanel'
-import ProfileSettings    from '../components/ProfileSettings'
-import MessagesPanel      from '../components/MessagesPanel'
-import PrescriptionsPanel from '../components/PrescriptionsPanel'
+import MonitoringSession    from '../rehab/MonitoringSession'
+import SessionHistory       from '../rehab/SessionHistory'
+import DashboardLayout      from '../components/layout/DashboardLayout'
+import NotificationsPanel   from '../components/NotificationsPanel'
+import ProfileSettings      from '../components/ProfileSettings'
+import MessagesPanel        from '../components/MessagesPanel'
+import PrescriptionsPanel   from '../components/PrescriptionsPanel'
+import BookAppointmentPanel from '../components/BookAppointmentPanel'
 import { useToast }    from '../components/ToastProvider'
 import {
   CalendarDays, Pill, Heart, Play, Activity, FileText,
   Clock, AlertCircle, TrendingUp, ChevronRight, Zap, Bell,
-  CheckCircle,
+  CheckCircle, Video, MapPin, ExternalLink, Plus,
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -35,16 +36,18 @@ const STATUS_COLORS = {
   Confirmed: { color: 'var(--success)', bg: 'var(--success-bg)', border: 'var(--success-border)' },
   Pending:   { color: 'var(--warning)', bg: 'var(--warning-bg)', border: 'var(--warning-border)' },
   Cancelled: { color: 'var(--danger)',  bg: 'var(--danger-bg)',  border: 'var(--danger-border)'  },
+  confirmed: { color: 'var(--success)', bg: 'var(--success-bg)', border: 'var(--success-border)' },
+  pending:   { color: 'var(--warning)', bg: 'var(--warning-bg)', border: 'var(--warning-border)' },
+  cancelled: { color: 'var(--danger)',  bg: 'var(--danger-bg)',  border: 'var(--danger-border)'  },
+  declined:  { color: 'var(--danger)',  bg: 'var(--danger-bg)',  border: 'var(--danger-border)'  },
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   HOOK – live prescription (exercise-assignment) count
-   Calls GET /api/patient/my-exercises and counts the returned assignments.
-   Falls back to the static dashData.prescriptions value if the call fails.
+   HOOK – live prescription count
 ───────────────────────────────────────────────────────────────────── */
 function usePrescriptionCount(fallback = 0) {
-  const [count,   setCount]   = useState(null)   // null = still loading
-  const [loaded,  setLoaded]  = useState(false)
+  const [count,  setCount]  = useState(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     api.get('/patient/my-exercises')
@@ -52,16 +55,14 @@ function usePrescriptionCount(fallback = 0) {
         const assignments = r.data?.assignments ?? []
         setCount(assignments.length)
       })
-      .catch(() => {
-        // silently use the fallback supplied by the dashboard payload
-        setCount(null)
-      })
+      .catch(() => setCount(null))
       .finally(() => setLoaded(true))
   }, [])
 
-  // While loading we show the fallback from dashData so there's no flash of 0
-  const displayCount = count !== null ? count : fallback
-  return { prescriptionCount: displayCount, prescriptionLoaded: loaded }
+  return {
+    prescriptionCount:  count !== null ? count : fallback,
+    prescriptionLoaded: loaded,
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -94,9 +95,13 @@ function SectionHeader({ title, subtitle, action }) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color, loading }) {
+function StatCard({ label, value, icon: Icon, color, loading, onClick }) {
   return (
-    <Card>
+    <Card style={{ cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }}
+      onClick={onClick}
+      onMouseEnter={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-md)' : undefined}
+      onMouseLeave={onClick ? e => e.currentTarget.style.boxShadow = 'var(--shadow-sm)' : undefined}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           width: 42, height: 42, borderRadius: 10,
@@ -107,24 +112,20 @@ function StatCard({ label, value, icon: Icon, color, loading }) {
           <Icon size={18} color={color || 'var(--brand)'} strokeWidth={2} />
         </div>
         <div>
-          {loading
-            ? (
-              /* Skeleton shimmer while live count loads */
-              <div style={{
-                width: 36, height: 24, borderRadius: 6,
-                background: 'var(--border)', marginBottom: 6,
-                animation: 'shimmer 1.2s ease-in-out infinite',
-              }} />
-            )
-            : (
-              <div style={{
-                fontSize: 24, fontWeight: 700, color: 'var(--text-primary)',
-                lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-              }}>
-                {value}
-              </div>
-            )
-          }
+          {loading ? (
+            <div style={{
+              width: 36, height: 24, borderRadius: 6,
+              background: 'var(--border)', marginBottom: 6,
+              animation: 'shimmer 1.2s ease-in-out infinite',
+            }} />
+          ) : (
+            <div style={{
+              fontSize: 24, fontWeight: 700, color: 'var(--text-primary)',
+              lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+            }}>
+              {value}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{label}</div>
         </div>
       </div>
@@ -136,17 +137,10 @@ function PageSection({ title, subtitle, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div>
-        <h1 style={{
-          fontSize: 20, fontWeight: 700, color: 'var(--text-primary)',
-          margin: 0, letterSpacing: '-0.02em',
-        }}>
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
           {title}
         </h1>
-        {subtitle && (
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-            {subtitle}
-          </p>
-        )}
+        {subtitle && <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>{subtitle}</p>}
       </div>
       {children}
     </div>
@@ -172,6 +166,9 @@ export default function PatientDashboard() {
   const [lastSession,    setLast]           = useState(null)
   const [unreadCount,    setUnreadCount]    = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [pendingAppts,   setPendingAppts]   = useState(0)
+  // Live appointments from backend (used for the overview table)
+  const [liveAppts,      setLiveAppts]      = useState(null)
 
   /* ── Dashboard data ── */
   useEffect(() => {
@@ -181,20 +178,43 @@ export default function PatientDashboard() {
         setDashData(d)
         setUnreadCount(d.unread_notifications || 0)
         setUnreadMessages(d.unread_messages || 0)
-        if (d.doctor_accepted && d.assigned_doctor) {
+        if (d.doctor_accepted && (d.assigned_doctor || d.assigned_doctor_email)) {
+          const doctorDisplay = d.assigned_doctor ? `Dr. ${d.assigned_doctor}` : 'Your doctor'
           showToast({
             type: 'request_accepted',
             title: 'Doctor Assigned',
-            message: `Dr. ${d.assigned_doctor} has accepted your care request.`,
+            message: `${doctorDisplay} has accepted your care request.`,
           })
         }
       })
       .catch(() => setError('Failed to load dashboard data.'))
       .finally(() => setLoading(false))
+
+    // Fetch live appointments for sidebar badge + overview table
+    api.get('/appointments')
+      .then(r => {
+        const appts = r.data.appointments || []
+        setLiveAppts(appts)
+        // "pending" for patient = awaiting doctor confirmation
+        const pending = appts.filter(a => a.status === 'pending').length
+        setPendingAppts(pending)
+      })
+      .catch(() => {})
   }, [])
 
+  // Refresh appointment badge when leaving appointments tab
+  useEffect(() => {
+    if (tab === 'appointments') return
+    api.get('/appointments')
+      .then(r => {
+        const appts = r.data.appointments || []
+        setLiveAppts(appts)
+        setPendingAppts(appts.filter(a => a.status === 'pending').length)
+      })
+      .catch(() => {})
+  }, [tab])
+
   /* ── Live prescription count ── */
-  // fallback = dashData?.prescriptions so the stat is never empty
   const { prescriptionCount, prescriptionLoaded } = usePrescriptionCount(
     dashData?.prescriptions ?? 0
   )
@@ -207,11 +227,11 @@ export default function PatientDashboard() {
       .catch(async () => {
         try {
           const { data } = await rehabApi.post('/api/patients', {
-            name:          user.name,
-            email:         user.email,
-            doctor_email:  'doctor@healthcare.dev',
-            condition:     'Shoulder Rehabilitation',
-            target_angle:  90,
+            name:         user.name,
+            email:        user.email,
+            doctor_email: 'doctor@healthcare.dev',
+            condition:    'Shoulder Rehabilitation',
+            target_angle: 90,
           })
           setRP(data)
         } catch {}
@@ -227,6 +247,9 @@ export default function PatientDashboard() {
       }
     : null
 
+  // Combined appointments: live ones take priority, fall back to dashData
+  const appointments = liveAppts ?? dashData?.appointments ?? []
+
   if (loading) return <LoadingScreen />
 
   return (
@@ -236,13 +259,11 @@ export default function PatientDashboard() {
       activeTab={tab}
       onTabChange={setTab}
       unreadMessages={unreadMessages}
+      pendingAppts={pendingAppts}
     >
       {/* shimmer keyframe */}
       <style>{`
-        @keyframes shimmer {
-          0%,100% { opacity: 1 }
-          50%      { opacity: 0.4 }
-        }
+        @keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.4} }
       `}</style>
 
       {/* ─────────── OVERVIEW ─────────── */}
@@ -272,10 +293,7 @@ export default function PatientDashboard() {
             >
               <Bell size={14} color="var(--text-muted)" strokeWidth={2} />
               {unreadCount > 0 && (
-                <span style={{
-                  background: '#ef4444', color: '#fff', borderRadius: 10,
-                  padding: '0.05rem 0.35rem', fontSize: '0.6rem', fontWeight: 700,
-                }}>
+                <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0.05rem 0.35rem', fontSize: '0.6rem', fontWeight: 700 }}>
                   {unreadCount}
                 </span>
               )}
@@ -298,14 +316,10 @@ export default function PatientDashboard() {
                 {dashData.doctor_accepted
                   ? (
                     <>
-                      <strong>Doctor assigned:</strong> Dr. {dashData.assigned_doctor} —{' '}
+                      <strong>Doctor assigned:</strong> {dashData.assigned_doctor ? `Dr. ${dashData.assigned_doctor}` : 'Your doctor'} —{' '}
                       <button
                         onClick={() => setTab('messages')}
-                        style={{
-                          background: 'none', border: 'none', color: 'var(--success)',
-                          fontWeight: 600, cursor: 'pointer', padding: 0,
-                          textDecoration: 'underline', fontFamily: 'inherit',
-                        }}
+                        style={{ background: 'none', border: 'none', color: 'var(--success)', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}
                       >
                         Message them
                       </button>
@@ -318,11 +332,7 @@ export default function PatientDashboard() {
           )}
 
           {error && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
-              borderRadius: 10, padding: '12px 16px', color: 'var(--danger)', fontSize: 13,
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, padding: '12px 16px', color: 'var(--danger)', fontSize: 13 }}>
               <AlertCircle size={15} strokeWidth={2} /> {error}
             </div>
           )}
@@ -331,19 +341,14 @@ export default function PatientDashboard() {
             <>
               {/* ── Stat cards ── */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+                {/* Clickable — goes to appointments tab */}
                 <StatCard
                   label="Upcoming Appointments"
-                  value={dashData.appointments.length}
+                  value={appointments.filter(a => ['confirmed', 'Confirmed', 'pending', 'Pending'].includes(a.status)).length}
                   icon={CalendarDays}
                   color="#3b82f6"
+                  onClick={() => setTab('appointments')}
                 />
-
-                {/*
-                  ✅ LIVE COUNT:
-                  prescriptionCount comes from GET /api/patient/my-exercises
-                  (number of exercise assignment batches).
-                  prescriptionLoaded drives the shimmer skeleton.
-                */}
                 <StatCard
                   label="Active Prescriptions"
                   value={prescriptionCount}
@@ -351,7 +356,6 @@ export default function PatientDashboard() {
                   color="#8b5cf6"
                   loading={!prescriptionLoaded}
                 />
-
                 <StatCard
                   label="Health Score"
                   value={dashData.health_score}
@@ -361,83 +365,126 @@ export default function PatientDashboard() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: 14 }}>
-                {/* Appointments table */}
+                {/* Appointments table — live data with Meet link support */}
                 <Card noPad>
                   <SectionHeader
                     title="Upcoming Appointments"
-                    subtitle={`${dashData.appointments.length} scheduled`}
+                    subtitle={`${appointments.length} scheduled`}
+                    action={
+                      <button
+                        onClick={() => setTab('appointments')}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          fontSize: 12, fontWeight: 600, color: 'var(--brand)',
+                          background: 'var(--brand-light)', border: '1px solid var(--brand-border)',
+                          borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        <Plus size={11} strokeWidth={2.5} /> Book New
+                      </button>
+                    }
                   />
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                      <thead>
-                        <tr>
-                          {['Doctor', 'Date', 'Status'].map(h => (
-                            <th key={h} style={{
-                              padding: '10px 20px', textAlign: 'left',
-                              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                              textTransform: 'uppercase', color: 'var(--text-muted)',
-                              background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)',
-                            }}>
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashData.appointments.map((a, i) => {
-                          const s = STATUS_COLORS[a.status] || STATUS_COLORS.Pending
-                          return (
-                            <tr
-                              key={i}
-                              style={{ borderBottom: '1px solid var(--border-light)' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <td style={{ padding: '12px 20px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                                {a.doctor}
-                              </td>
-                              <td style={{ padding: '12px 20px', color: 'var(--text-secondary)', fontSize: 12 }}>
-                                {a.date}
-                              </td>
-                              <td style={{ padding: '12px 20px' }}>
-                                <span style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                                  padding: '3px 10px', borderRadius: 99,
-                                  fontSize: 11, fontWeight: 700,
-                                  color: s.color, background: s.bg, border: `1px solid ${s.border}`,
-                                }}>
-                                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
-                                  {a.status}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                    {appointments.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center' }}>
+                        <CalendarDays size={24} strokeWidth={1} style={{ marginBottom: 8, opacity: 0.2, color: 'var(--text-muted)' }} />
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>No appointments yet</div>
+                        <button
+                          onClick={() => setTab('appointments')}
+                          style={{ fontSize: 12, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}
+                        >
+                          Book your first appointment →
+                        </button>
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr>
+                            {['Doctor', 'Date', 'Type', 'Status', ''].map(h => (
+                              <th key={h} style={{
+                                padding: '10px 16px', textAlign: 'left',
+                                fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                                textTransform: 'uppercase', color: 'var(--text-muted)',
+                                background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)',
+                              }}>
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {appointments.slice(0, 5).map((a, i) => {
+                            const s = STATUS_COLORS[a.status] || STATUS_COLORS.Pending
+                            return (
+                              <tr
+                                key={i}
+                                style={{ borderBottom: '1px solid var(--border-light)' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <td style={{ padding: '10px 16px', fontWeight: 500, color: 'var(--text-primary)', fontSize: 13 }}>
+                                  {a.doctor_name || a.doctor || '—'}
+                                </td>
+                                <td style={{ padding: '10px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>
+                                  {a.appointment_date
+                                    ? new Date(a.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                    : a.date || '—'
+                                  }
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  {a.type && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: a.type === 'online' ? '#3b82f6' : '#8b5cf6' }}>
+                                      {a.type === 'online' ? <Video size={11} strokeWidth={2} /> : <MapPin size={11} strokeWidth={2} />}
+                                      {a.type === 'online' ? 'Online' : 'In-Clinic'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>
+                                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.color }} />
+                                    {a.status ? (a.status.charAt(0).toUpperCase() + a.status.slice(1)) : '—'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  {a.type === 'online' && a.status === 'confirmed' && a.meet_link && (
+                                    <a
+                                      href={a.meet_link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#1a73e8', color: '#fff', borderRadius: 6, fontSize: 11, fontWeight: 600, textDecoration: 'none' }}
+                                    >
+                                      <Video size={10} strokeWidth={2} /> Join
+                                    </a>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
+                  {appointments.length > 5 && (
+                    <button
+                      onClick={() => setTab('appointments')}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', padding: '10px', background: 'none', border: 'none', borderTop: '1px solid var(--border-light)', fontSize: 12, color: 'var(--brand)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      View all {appointments.length} appointments <ChevronRight size={12} strokeWidth={2.5} />
+                    </button>
+                  )}
                 </Card>
 
                 {/* Side column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {/* Start session CTA */}
-                  <div style={{
-                    background: 'var(--text-primary)', borderRadius: 12,
-                    padding: '20px 18px', boxShadow: 'var(--shadow-md)',
-                  }}>
+                  <div style={{ background: 'var(--text-primary)', borderRadius: 12, padding: '20px 18px', boxShadow: 'var(--shadow-md)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <Zap size={13} color="var(--text-muted)" />
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
-                        textTransform: 'uppercase', letterSpacing: '0.08em',
-                      }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         Rehabilitation
                       </span>
                     </div>
-                    <div style={{
-                      fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
-                      lineHeight: 1.35, marginBottom: 6, color: 'var(--bg-card)',
-                    }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.35, marginBottom: 6, color: 'var(--bg-card)' }}>
                       Start Your Therapy Session
                     </div>
                     <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 14px' }}>
@@ -445,51 +492,57 @@ export default function PatientDashboard() {
                     </p>
                     <button
                       onClick={() => setTab('monitor')}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        background: 'var(--bg-card)', color: 'var(--text-primary)',
-                        border: 'none', borderRadius: 8, padding: '10px 14px',
-                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                        fontFamily: 'inherit', width: '100%', justifyContent: 'center',
-                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-card)', color: 'var(--text-primary)', border: 'none', borderRadius: 8, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}
                     >
                       <Play size={13} fill="var(--text-primary)" color="var(--text-primary)" />
                       Start Monitoring
                     </button>
                   </div>
 
-                  {/* Prescriptions shortcut — shows live count badge */}
+                  {/* Book appointment shortcut */}
                   <div
-                    onClick={() => setTab('prescriptions')}
-                    style={{
-                      background: 'var(--bg-card)', border: '1px solid var(--border)',
-                      borderRadius: 12, padding: '16px 18px',
-                      cursor: 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'box-shadow 0.15s',
-                    }}
+                    onClick={() => setTab('appointments')}
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'box-shadow 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                     onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CalendarDays size={14} color="#3b82f6" strokeWidth={2} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Appointments
+                      </span>
+                      {pendingAppts > 0 && (
+                        <span style={{ marginLeft: 'auto', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                          {pendingAppts} pending
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 10px' }}>
+                      Book online or in-clinic appointments with your doctor.
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#3b82f6' }}>
+                      Manage Appointments <ChevronRight size={13} strokeWidth={2.5} />
+                    </div>
+                  </div>
+
+                  {/* Prescriptions shortcut */}
+                  <div
+                    onClick={() => setTab('prescriptions')}
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', transition: 'box-shadow 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Pill size={14} color="#8b5cf6" strokeWidth={2} />
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                         My Prescriptions
                       </span>
-                      {/* Live count badge */}
                       {prescriptionLoaded && prescriptionCount > 0 && (
-                        <span style={{
-                          marginLeft: 'auto',
-                          background: 'rgba(139,92,246,0.12)',
-                          border: '1px solid rgba(139,92,246,0.3)',
-                          color: '#8b5cf6',
-                          borderRadius: 99, padding: '2px 8px',
-                          fontSize: 11, fontWeight: 700,
-                        }}>
+                        <span style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#8b5cf6', borderRadius: 99, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
                           {prescriptionCount}
                         </span>
                       )}
@@ -504,19 +557,14 @@ export default function PatientDashboard() {
 
                   {/* System info */}
                   <Card>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
-                      About the System
-                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>About the System</div>
                     {[
-                      ['Webcam-based motion capture',        Activity],
-                      ['AI angle detection (MediaPipe)',      TrendingUp],
-                      ['Reports shared with your doctor',    FileText],
-                      ['30-sec session per exercise',        Clock],
+                      ['Webcam-based motion capture',     Activity  ],
+                      ['AI angle detection (MediaPipe)',  TrendingUp],
+                      ['Reports shared with your doctor', FileText  ],
+                      ['30-sec session per exercise',     Clock     ],
                     ].map(([text, Icon], i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: 12, color: 'var(--text-secondary)', padding: '4px 0',
-                      }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-secondary)', padding: '4px 0' }}>
                         <Icon size={13} color="var(--text-muted)" strokeWidth={1.75} /> {text}
                       </div>
                     ))}
@@ -526,15 +574,7 @@ export default function PatientDashboard() {
 
               <button
                 onClick={() => setTab('history')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 10, padding: '12px 16px',
-                  fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  width: '100%', justifyContent: 'space-between',
-                  boxShadow: 'var(--shadow-sm)',
-                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'space-between', boxShadow: 'var(--shadow-sm)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Clock size={14} color="var(--text-muted)" />
@@ -545,6 +585,14 @@ export default function PatientDashboard() {
             </>
           )}
         </div>
+      )}
+
+      {/* ─────────── APPOINTMENTS ─────────── */}
+      {tab === 'appointments' && (
+        <BookAppointmentPanel
+          assignedDoctorId={dashData?.assigned_doctor_id}
+          assignedDoctorName={dashData?.assigned_doctor}
+        />
       )}
 
       {/* ─────────── PRESCRIPTIONS ─────────── */}
@@ -607,19 +655,9 @@ export default function PatientDashboard() {
 ───────────────────────────────────────────────────────────────────── */
 function LoadingScreen() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', background: 'var(--bg-app)',
-      flexDirection: 'column', gap: 12,
-    }}>
-      <div style={{
-        width: 36, height: 36, border: '3px solid var(--border)',
-        borderTopColor: 'var(--brand)', borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-      }} />
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
-        Loading dashboard…
-      </p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-app)', flexDirection: 'column', gap: 12 }}>
+      <div style={{ width: 36, height: 36, border: '3px solid var(--border)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Loading dashboard…</p>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )

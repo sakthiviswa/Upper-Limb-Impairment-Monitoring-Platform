@@ -1,5 +1,8 @@
 /**
  * NotificationsPanel.jsx — fully theme-aware via CSS variables
+ * Updated: appointment_request, appointment_declined, appointment_cancelled types added.
+ *          Doctor can Accept/Decline appointment requests inline.
+ *          Patient sees Google Meet join button when appointment is confirmed.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -7,23 +10,27 @@ import {
   UserPlus, CheckCircle2, XCircle, Dumbbell, AlertTriangle,
   Bell, Trophy, TrendingDown, MessageSquare, CalendarCheck,
   FileBarChart2, ClipboardList, Check, X, RefreshCw,
+  CalendarDays, Video, ExternalLink,
 } from 'lucide-react'
 import api from '../utils/api'
 import { useToast } from './ToastProvider'
 
 const TYPE_CONFIG = {
-  doctor_request:     { Icon: UserPlus,      color: '#3b82f6', label: 'Patient Request' },
-  request_accepted:   { Icon: CheckCircle2,  color: '#10b981', label: 'Accepted'        },
-  request_declined:   { Icon: XCircle,       color: '#ef4444', label: 'Declined'        },
-  session_completed:  { Icon: Dumbbell,      color: '#0d9488', label: 'Session'         },
-  session_missed:     { Icon: AlertTriangle, color: '#f59e0b', label: 'Missed'          },
-  session_reminder:   { Icon: Bell,          color: '#8b5cf6', label: 'Reminder'        },
-  progress_milestone: { Icon: Trophy,        color: '#10b981', label: 'Milestone'       },
-  progress_concern:   { Icon: TrendingDown,  color: '#ef4444', label: 'Concern'         },
-  new_message:        { Icon: MessageSquare, color: '#db2777', label: 'Message'         },
-  appointment_booked: { Icon: CalendarCheck, color: '#3b82f6', label: 'Appointment'     },
-  report_ready:       { Icon: FileBarChart2, color: '#ea580c', label: 'Report'          },
-  profile_incomplete: { Icon: ClipboardList, color: '#f59e0b', label: 'Profile'         },
+  doctor_request:        { Icon: UserPlus,      color: '#3b82f6', label: 'Patient Request'  },
+  request_accepted:      { Icon: CheckCircle2,  color: '#10b981', label: 'Accepted'         },
+  request_declined:      { Icon: XCircle,       color: '#ef4444', label: 'Declined'         },
+  session_completed:     { Icon: Dumbbell,      color: '#0d9488', label: 'Session'          },
+  session_missed:        { Icon: AlertTriangle, color: '#f59e0b', label: 'Missed'           },
+  session_reminder:      { Icon: Bell,          color: '#8b5cf6', label: 'Reminder'         },
+  progress_milestone:    { Icon: Trophy,        color: '#10b981', label: 'Milestone'        },
+  progress_concern:      { Icon: TrendingDown,  color: '#ef4444', label: 'Concern'         },
+  new_message:           { Icon: MessageSquare, color: '#db2777', label: 'Message'          },
+  appointment_booked:    { Icon: CalendarCheck, color: '#10b981', label: 'Appt Confirmed'   },
+  appointment_request:   { Icon: CalendarDays,  color: '#f59e0b', label: 'Appt Request'     },
+  appointment_declined:  { Icon: XCircle,       color: '#ef4444', label: 'Appt Declined'    },
+  appointment_cancelled: { Icon: XCircle,       color: '#6b7280', label: 'Appt Cancelled'   },
+  report_ready:          { Icon: FileBarChart2, color: '#ea580c', label: 'Report'           },
+  profile_incomplete:    { Icon: ClipboardList, color: '#f59e0b', label: 'Profile'          },
 }
 
 const DEFAULT_CFG = TYPE_CONFIG.doctor_request
@@ -39,12 +46,10 @@ export default function NotificationsPanel({ role, onCountChange }) {
       .then(res => {
         const notifs = res.data.notifications || []
         setNotifications(notifs)
-        const unread = notifs.filter(n => !n.isRead).length
-        if (onCountChange) onCountChange(unread)
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [onCountChange])
+  }, [])
 
   useEffect(() => {
     fetchNotifications()
@@ -52,27 +57,35 @@ export default function NotificationsPanel({ role, onCountChange }) {
     return () => clearInterval(i)
   }, [fetchNotifications])
 
+  // Sync unread count to parent only in an effect (never during render or inside setState)
+  useEffect(() => {
+    if (onCountChange) {
+      const unread = notifications.filter(n => !n.isRead).length
+      onCountChange(unread)
+    }
+  }, [notifications, onCountChange])
+
   const markRead = useCallback(async (notifId) => {
     await api.post(`/notifications/${notifId}/read`).catch(() => {})
-    setNotifications(prev => {
-      const updated = prev.map(n => n.id === notifId ? { ...n, isRead: true } : n)
-      if (onCountChange) onCountChange(updated.filter(n => !n.isRead).length)
-      return updated
-    })
-  }, [onCountChange])
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n))
+  }, [])
 
   const markAllRead = async () => {
     await api.post('/notifications/read-all').catch(() => {})
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-    if (onCountChange) onCountChange(0)
   }
 
+  /* ── Patient-request accept/decline ── */
   const handleAccept = async (notif) => {
     setActing(p => ({ ...p, [notif.id]: 'accepting' }))
     try {
       await api.post(`/doctor/accept-patient/${notif.senderId}`)
       await markRead(notif.id)
-      showToast({ type: 'request_accepted', title: 'Patient Accepted', message: `${notif.patientDetails?.name || 'Patient'} is now your assigned patient.`, actions: [{ label: 'Message', variant: 'primary', onClick: () => {} }] })
+      showToast({
+        type: 'request_accepted', title: 'Patient Accepted',
+        message: `${notif.patientDetails?.name || 'Patient'} is now your assigned patient.`,
+        actions: [{ label: 'Message', variant: 'primary', onClick: () => {} }],
+      })
       fetchNotifications()
     } catch (e) {
       showToast({ type: 'error', title: 'Error', message: e.response?.data?.message || 'Failed to accept.' })
@@ -88,6 +101,36 @@ export default function NotificationsPanel({ role, onCountChange }) {
       fetchNotifications()
     } catch (e) {
       showToast({ type: 'error', title: 'Error', message: e.response?.data?.message || 'Failed to decline.' })
+    } finally { setActing(p => ({ ...p, [notif.id]: null })) }
+  }
+
+  /* ── Appointment-request confirm/decline ── */
+  const handleApptConfirm = async (notif) => {
+    setActing(p => ({ ...p, [notif.id]: 'appt-confirming' }))
+    try {
+      const apptId = notif.extra?.appointment_id
+      await api.post(`/appointments/${apptId}/respond`, { status: 'confirmed' })
+      await markRead(notif.id)
+      showToast({
+        type: 'request_accepted', title: 'Appointment Confirmed',
+        message: `${notif.extra?.patient_name || 'Patient'}'s appointment has been confirmed. They've been notified.`,
+      })
+      fetchNotifications()
+    } catch (e) {
+      showToast({ type: 'error', title: 'Error', message: e.response?.data?.detail || 'Failed to confirm.' })
+    } finally { setActing(p => ({ ...p, [notif.id]: null })) }
+  }
+
+  const handleApptDecline = async (notif) => {
+    setActing(p => ({ ...p, [notif.id]: 'appt-declining' }))
+    try {
+      const apptId = notif.extra?.appointment_id
+      await api.post(`/appointments/${apptId}/respond`, { status: 'declined' })
+      await markRead(notif.id)
+      showToast({ type: 'request_declined', title: 'Appointment Declined', message: `${notif.extra?.patient_name || 'Patient'} has been notified.` })
+      fetchNotifications()
+    } catch (e) {
+      showToast({ type: 'error', title: 'Error', message: e.response?.data?.detail || 'Failed to decline.' })
     } finally { setActing(p => ({ ...p, [notif.id]: null })) }
   }
 
@@ -171,13 +214,56 @@ export default function NotificationsPanel({ role, onCountChange }) {
                       {!notif.isRead && <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color }} />}
                     </div>
 
-                    {/* Patient detail card */}
+                    {/* Patient detail card (for doctor_request) */}
                     {notif.type === 'doctor_request' && notif.patientDetails && (
                       <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', marginBottom: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
                         <DetailRow icon={UserPlus}      label="Name"     value={notif.patientDetails.name} />
                         <DetailRow icon={CalendarCheck} label="Age"      value={notif.patientDetails.age ? `${notif.patientDetails.age} yrs` : '—'} />
                         <DetailRow icon={ClipboardList} label="Injury"   value={notif.patientDetails.injuryType || '—'} />
                         <DetailRow icon={AlertTriangle} label="Severity" value={notif.patientDetails.injurySeverity || '—'} />
+                      </div>
+                    )}
+
+                    {/* Appointment detail card (for appointment_request) */}
+                    {notif.type === 'appointment_request' && notif.extra && (
+                      <div style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', marginBottom: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+                        <DetailRow icon={UserPlus}    label="Patient"   value={notif.extra.patient_name || '—'} />
+                        <DetailRow icon={CalendarDays} label="Date"     value={notif.extra.appointment_date ? new Date(notif.extra.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'} />
+                        <DetailRow icon={Video}       label="Type"      value={notif.extra.appointment_type === 'online' ? 'Online (Meet)' : 'In-Clinic'} />
+                        <DetailRow icon={ClipboardList} label="Duration" value={notif.extra.duration_mins ? `${notif.extra.duration_mins} min` : '—'} />
+                        {notif.extra.reason && (
+                          <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'flex-start', gap: 4, marginTop: 2 }}>
+                            <ClipboardList size={11} color="var(--text-muted)" strokeWidth={2} style={{ marginTop: 1, flexShrink: 0 }} />
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Reason:</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 500, fontStyle: 'italic' }}>{notif.extra.reason}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Confirmed appointment — show Meet link for patient */}
+                    {notif.type === 'appointment_booked' && notif.extra?.meet_link && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 10px', borderRadius: 8, marginBottom: 6,
+                        background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)',
+                        fontSize: 12,
+                      }}>
+                        <Video size={13} color="#3b82f6" strokeWidth={2} style={{ flexShrink: 0 }} />
+                        <span style={{ color: 'var(--text-secondary)', flex: 1 }}>Your Google Meet link is ready</span>
+                        <a
+                          href={notif.extra.meet_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '4px 10px', background: '#1a73e8', color: '#fff',
+                            borderRadius: 6, fontSize: 11, fontWeight: 600, textDecoration: 'none',
+                          }}
+                        >
+                          <Video size={11} strokeWidth={2} /> Join Meet
+                          <ExternalLink size={10} strokeWidth={2} />
+                        </a>
                       </div>
                     )}
 
@@ -191,27 +277,54 @@ export default function NotificationsPanel({ role, onCountChange }) {
                       <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {new Date(notif.createdAt).toLocaleString()}
                       </span>
-                      {/* Doctor: accept/decline */}
-                      {role === 'doctor' && notif.type === 'doctor_request' && !notif.isRead && (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={() => handleAccept(notif)} disabled={!!isActing}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
-                            <Check size={12} strokeWidth={2.5} />
-                            {isActing === 'accepting' ? 'Accepting…' : 'Accept'}
+
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {/* Doctor: accept/decline PATIENT request */}
+                        {role === 'doctor' && notif.type === 'doctor_request' && !notif.isRead && (
+                          <>
+                            <button onClick={() => handleAccept(notif)} disabled={!!isActing}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
+                              <Check size={12} strokeWidth={2.5} />
+                              {isActing === 'accepting' ? 'Accepting…' : 'Accept'}
+                            </button>
+                            <button onClick={() => handleDecline(notif)} disabled={!!isActing}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--bg-card)', color: 'var(--danger)', border: '1px solid var(--danger-border)', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
+                              <X size={12} strokeWidth={2.5} />
+                              {isActing === 'declining' ? 'Declining…' : 'Decline'}
+                            </button>
+                          </>
+                        )}
+
+                        {/* Doctor: confirm/decline APPOINTMENT request */}
+                        {role === 'doctor' && notif.type === 'appointment_request' && !notif.isRead && (
+                          <>
+                            <button onClick={() => handleApptConfirm(notif)} disabled={!!isActing}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
+                              <Check size={12} strokeWidth={2.5} />
+                              {isActing === 'appt-confirming' ? 'Confirming…' : 'Confirm'}
+                            </button>
+                            <button onClick={() => handleApptDecline(notif)} disabled={!!isActing}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--bg-card)', color: 'var(--danger)', border: '1px solid var(--danger-border)', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
+                              <X size={12} strokeWidth={2.5} />
+                              {isActing === 'appt-declining' ? 'Declining…' : 'Decline'}
+                            </button>
+                          </>
+                        )}
+
+                        {/* Patient: dismiss unread non-appointment notifications */}
+                        {!notif.isRead && role !== 'doctor' && !['appointment_booked'].includes(notif.type) && (
+                          <button onClick={() => markRead(notif.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+                            <X size={11} strokeWidth={2} /> Dismiss
                           </button>
-                          <button onClick={() => handleDecline(notif)} disabled={!!isActing}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 12px', background: 'var(--bg-card)', color: 'var(--danger)', border: '1px solid var(--danger-border)', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: isActing ? 'not-allowed' : 'pointer', opacity: isActing ? 0.6 : 1, fontFamily: 'inherit' }}>
-                            <X size={12} strokeWidth={2.5} />
-                            {isActing === 'declining' ? 'Declining…' : 'Decline'}
+                        )}
+
+                        {/* Patient: mark read for appointment_booked (keep meet link visible) */}
+                        {!notif.isRead && role !== 'doctor' && notif.type === 'appointment_booked' && !notif.extra?.meet_link && (
+                          <button onClick={() => markRead(notif.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+                            <X size={11} strokeWidth={2} /> Dismiss
                           </button>
-                        </div>
-                      )}
-                      {/* Patient: dismiss */}
-                      {!notif.isRead && role !== 'doctor' && (
-                        <button onClick={() => markRead(notif.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'inherit' }}>
-                          <X size={11} strokeWidth={2} /> Dismiss
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

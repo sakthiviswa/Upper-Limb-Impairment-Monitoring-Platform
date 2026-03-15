@@ -34,12 +34,14 @@ from flask import Blueprint, jsonify, request, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timezone
 import os
+import uuid
 
 from extensions import db
 from models.user import User
 from models.notification import Notification
 from models.message import Conversation, Message
 from models.exercise_assignment import ExerciseAssignment
+from models.appointment_flask import Appointment
 
 # Rehab DB — separate SQLAlchemy engine/session
 from database import SessionLocal
@@ -634,6 +636,169 @@ def mark_conversation_read(conv_id):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# APPOINTMENTS (Flask – same DB as User)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _appointment_to_response(appt):
+    """Enrich appointment with patient_name and doctor_name for frontend."""
+    patient = User.query.get(appt.patient_id) if appt.patient_id else None
+    doctor = User.query.get(appt.doctor_id) if appt.doctor_id else None
+    return appt.to_dict(
+        patient_name=patient.name if patient else None,
+        doctor_name=doctor.name if doctor else None,
+    )
+
+
+@user_bp.route("/appointments", methods=["GET"])
+@jwt_required()
+def list_appointments():
+    """List appointments for current user (patient sees their own; doctor sees theirs)."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+    if user.role == "patient":
+        q = Appointment.query.filter_by(patient_id=user_id)
+    elif user.role in ("doctor", "admin"):
+        q = Appointment.query.filter_by(doctor_id=user_id)
+    else:
+        return jsonify({"message": "Forbidden"}), 403
+    appts = q.order_by(Appointment.appointment_date.desc()).all()
+    return jsonify({
+        "appointments": [_appointment_to_response(a) for a in appts],
+        "total": len(appts),
+    }), 200
+
+
+@user_bp.route("/appointments", methods=["POST"])
+@jwt_required()
+def create_appointment():
+    """Patient books an appointment with their assigned doctor."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != "patient":
+        return jsonify({"message": "Forbidden"}), 403
+    data = request.get_json() or {}
+    doctor_id = data.get("doctor_id")
+    if not doctor_id:
+        return jsonify({"message": "doctor_id is required"}), 422
+    doctor = User.query.filter_by(id=int(doctor_id), role="doctor").first()
+    if not doctor:
+        return jsonify({"message": "Doctor not found"}), 404
+    appt_type = (data.get("type") or "online").lower()
+    if appt_type not in ("online", "offline"):
+        return jsonify({"message": "type must be online or offline"}), 422
+    if appt_type == "offline" and not (data.get("location") or "").strip():
+        return jsonify({"message": "Location is required for offline appointments"}), 422
+    appointment_date = data.get("appointment_date")
+    if not appointment_date:
+        return jsonify({"message": "appointment_date is required"}), 422
+    try:
+        dt = datetime.fromisoformat(appointment_date.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return jsonify({"message": "Invalid appointment_date format"}), 422
+    duration_mins = int(data.get("duration_mins", 30))
+    meet_link = None
+    if appt_type == "online":
+        code = uuid.uuid4().hex[:10]
+        meet_link = f"https://meet.google.com/{code[:3]}-{code[3:7]}-{code[7:10]}"
+    appt = Appointment(
+        patient_id=user_id,
+        doctor_id=doctor.id,
+        appointment_date=dt,
+        duration_mins=duration_mins,
+        type=appt_type,
+        reason=(data.get("reason") or "").strip(),
+        location=(data.get("location") or "").strip() or None,
+        meet_link=meet_link,
+        status="pending",
+    )
+    db.session.add(appt)
+    db.session.flush()
+    # Notify doctor (use doctor_request so it appears in their notifications)
+    type_label = "online" if appt_type == "online" else "in-clinic"
+    _send_notification(
+        recipient_id=doctor.id,
+        sender_id=user_id,
+        notif_type="doctor_request",
+        message=f"{user.name} has requested a {type_label} appointment on {dt.strftime('%b %d, %Y at %H:%M UTC')}.",
+    )
+    db.session.commit()
+    db.session.refresh(appt)
+    return jsonify(_appointment_to_response(appt)), 201
+
+
+@user_bp.route("/appointments/<int:appt_id>/respond", methods=["POST"])
+@jwt_required()
+def respond_appointment(appt_id):
+    """Doctor confirms or declines an appointment request."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role not in ("doctor", "admin"):
+        return jsonify({"message": "Forbidden"}), 403
+    data = request.get_json() or {}
+    status = (data.get("status") or "").lower()
+    if status not in ("confirmed", "declined"):
+        return jsonify({"message": "status must be confirmed or declined"}), 422
+    appt = Appointment.query.filter_by(id=appt_id, doctor_id=user_id).first()
+    if not appt:
+        return jsonify({"message": "Appointment not found"}), 404
+    if appt.status != "pending":
+        return jsonify({"message": "Appointment already responded to"}), 400
+    appt.status = status
+    appt.updated_at = datetime.now(timezone.utc)
+    patient = User.query.get(appt.patient_id)
+    date_str = appt.appointment_date.strftime("%b %d, %Y at %H:%M UTC")
+    type_label = "online" if appt.type == "online" else "in-clinic"
+    if status == "confirmed":
+        msg = f"Dr. {user.name} has confirmed your {type_label} appointment on {date_str}."
+        if appt.meet_link:
+            msg += " Google Meet link is ready."
+        notif_type = "request_accepted"
+    else:
+        msg = f"Dr. {user.name} has declined your appointment request. Please book another time."
+        notif_type = "request_declined"
+    _send_notification(
+        recipient_id=appt.patient_id,
+        sender_id=user_id,
+        notif_type=notif_type,
+        message=msg,
+    )
+    db.session.commit()
+    db.session.refresh(appt)
+    return jsonify(_appointment_to_response(appt)), 200
+
+
+@user_bp.route("/appointments/<int:appt_id>", methods=["DELETE"])
+@jwt_required()
+def cancel_appointment_route(appt_id):
+    """Patient or doctor cancels an appointment."""
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+    if user.role == "patient":
+        appt = Appointment.query.filter_by(id=appt_id, patient_id=user_id).first()
+    else:
+        appt = Appointment.query.filter_by(id=appt_id, doctor_id=user_id).first()
+    if not appt:
+        return jsonify({"message": "Appointment not found"}), 404
+    if appt.status in ("completed", "cancelled"):
+        return jsonify({"message": "Cannot cancel this appointment"}), 400
+    appt.status = "cancelled"
+    appt.updated_at = datetime.now(timezone.utc)
+    other_id = appt.doctor_id if user.role == "patient" else appt.patient_id
+    _send_notification(
+        recipient_id=other_id,
+        sender_id=user_id,
+        notif_type="request_declined",
+        message=f"{user.name} has cancelled the appointment on {appt.appointment_date.strftime('%b %d, %Y at %H:%M UTC')}.",
+    )
+    db.session.commit()
+    return "", 204
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # DASHBOARDS
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -664,21 +829,22 @@ def patient_dashboard():
     )
 
     assigned_doctor_email = None
+    assigned_doctor_name = user.doctor_name
     if user.assigned_doctor_id:
         doctor = User.query.get(user.assigned_doctor_id)
-        assigned_doctor_email = doctor.email if doctor else None
+        if doctor:
+            assigned_doctor_email = doctor.email
+            assigned_doctor_name = doctor.name  # always show the accepting doctor's name
 
     data = {
-        "appointments": [
-            {"id": 1, "doctor": "Dr. Smith", "date": "2025-03-15", "status": "Confirmed"},
-            {"id": 2, "doctor": "Dr. Jones", "date": "2025-03-22", "status": "Pending"},
-        ],
+        "appointments": [],   # use GET /api/appointments for live list (correct doctor names)
         "prescriptions":          2,
         "health_score":           85,
         "unread_notifications":   unread_notif,
         "unread_messages":        unread_msgs,
         "doctor_accepted":        user.doctor_accepted,
-        "assigned_doctor":        user.doctor_name,
+        "assigned_doctor_id":     user.assigned_doctor_id,
+        "assigned_doctor":        assigned_doctor_name,
         "assigned_doctor_email":  assigned_doctor_email,
     }
     return jsonify({"data": data}), 200

@@ -54,7 +54,8 @@ def create_app(env: str = None) -> Flask:
         # ⚠️  Import ALL models here so SQLAlchemy registers them before create_all()
         from models.user import User
         from models.notification import Notification
-        from models.message import Conversation, Message   # NEW
+        from models.message import Conversation, Message
+        from models.appointment_flask import Appointment
 
         db.create_all()
 
@@ -72,4 +73,5 @@ def create_app(env: str = None) -> Flask:
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Disable Flask's reloader on Windows to avoid intermittent SQLite "unable to open database file" errors
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)

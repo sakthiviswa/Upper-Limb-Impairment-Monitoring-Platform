@@ -18,8 +18,8 @@ class Notification(db.Model):
             "doctor_request",
             "request_accepted",
             "request_declined",
-            "report_ready",       # patient sends session report to doctor
-            "exercise_assigned",  # doctor assigns exercises to patient
+            "report_ready",
+            "exercise_assigned",
             name="notif_types",
         ),
         nullable=False,

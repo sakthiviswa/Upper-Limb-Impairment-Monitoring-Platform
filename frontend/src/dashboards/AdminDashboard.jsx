@@ -133,10 +133,10 @@ function MetricBar({ label, value, max, color }) {
 export default function AdminDashboard() {
   const { user } = useAuth()
   const { showToast } = useToast()
-  const [tab, setTab]     = useState('overview')
-  const [data, setData]   = useState(null)
+  const [tab, setTab]         = useState('overview')
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
 
   useEffect(() => {
     api.get('/admin/dashboard')
@@ -173,10 +173,10 @@ export default function AdminDashboard() {
 
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-              <StatCard label="Total Users"      value={fallback.totalUsers}      icon={Users}    color="#3b82f6" trend={12} />
-              <StatCard label="Doctors"          value={fallback.doctors}         icon={Activity} color="#10b981" trend={5}  />
-              <StatCard label="Patients"         value={fallback.patients}        icon={User}     color="#8b5cf6" trend={18} />
-              <StatCard label="Active Sessions"  value={fallback.activeSessions}  icon={Server}   color="#f59e0b" trend={-3} />
+              <StatCard label="Total Users"     value={fallback.totalUsers}     icon={Users}    color="#3b82f6" trend={12} />
+              <StatCard label="Doctors"         value={fallback.doctors}        icon={Activity} color="#10b981" trend={5}  />
+              <StatCard label="Patients"        value={fallback.patients}       icon={User}     color="#8b5cf6" trend={18} />
+              <StatCard label="Active Sessions" value={fallback.activeSessions} icon={Server}   color="#f59e0b" trend={-3} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
@@ -206,9 +206,9 @@ export default function AdminDashboard() {
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>System Health</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <MetricBar label="CPU Usage"     value={34} max={100} color="var(--brand)"   />
-                    <MetricBar label="Memory"        value={58} max={100} color="var(--success)"  />
-                    <MetricBar label="Storage"       value={72} max={100} color="var(--warning)"  />
+                    <MetricBar label="CPU Usage"      value={34} max={100} color="var(--brand)"  />
+                    <MetricBar label="Memory"         value={58} max={100} color="var(--success)" />
+                    <MetricBar label="Storage"        value={72} max={100} color="var(--warning)" />
                     <MetricBar label="DB Connections" value={28} max={100} color="#8b5cf6"        />
                   </div>
                   <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--success)' }}>
@@ -220,10 +220,10 @@ export default function AdminDashboard() {
                 <Card>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Platform Summary</div>
                   {[
-                    { label: 'Rehab Sessions Today', value: '24',     icon: Activity  },
-                    { label: 'Pending Approvals',     value: '7',      icon: Clock     },
-                    { label: 'Avg Session Duration',  value: '28 min', icon: Calendar  },
-                    { label: 'Uptime',                value: '99.9%',  icon: Server    },
+                    { label: 'Rehab Sessions Today', value: '24',     icon: Activity },
+                    { label: 'Pending Approvals',    value: '7',      icon: Clock    },
+                    { label: 'Avg Session Duration', value: '28 min', icon: Calendar },
+                    { label: 'Uptime',               value: '99.9%',  icon: Server   },
                   ].map((item, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--border-light)' : 'none' }}>
                       <item.icon size={13} color="var(--text-muted)" strokeWidth={2} />
@@ -290,21 +290,21 @@ export default function AdminDashboard() {
               <Card>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Resource Usage</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <MetricBar label="CPU"          value={34} max={100} color="var(--brand)"   />
-                  <MetricBar label="RAM"          value={58} max={100} color="var(--success)"  />
-                  <MetricBar label="Disk"         value={72} max={100} color="var(--warning)"  />
-                  <MetricBar label="Network I/O"  value={41} max={100} color="#8b5cf6"         />
+                  <MetricBar label="CPU"         value={34} max={100} color="var(--brand)"  />
+                  <MetricBar label="RAM"         value={58} max={100} color="var(--success)" />
+                  <MetricBar label="Disk"        value={72} max={100} color="var(--warning)" />
+                  <MetricBar label="Network I/O" value={41} max={100} color="#8b5cf6"        />
                 </div>
               </Card>
               <Card>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>Activity Log</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {[
-                    { text: 'New doctor registered', time: '2 min ago', icon: User, color: 'var(--brand)' },
-                    { text: 'Rehab session completed', time: '5 min ago', icon: Activity, color: 'var(--success)' },
-                    { text: 'Patient care request sent', time: '12 min ago', icon: Mail, color: '#8b5cf6' },
-                    { text: 'System backup completed', time: '1 hr ago', icon: Database, color: 'var(--text-muted)' },
-                    { text: 'High memory alert cleared', time: '2 hr ago', icon: Cpu, color: 'var(--warning)' },
+                    { text: 'New doctor registered',       time: '2 min ago',  icon: User,     color: 'var(--brand)'    },
+                    { text: 'Rehab session completed',     time: '5 min ago',  icon: Activity, color: 'var(--success)'  },
+                    { text: 'Patient care request sent',   time: '12 min ago', icon: Mail,     color: '#8b5cf6'         },
+                    { text: 'System backup completed',     time: '1 hr ago',   icon: Database, color: 'var(--text-muted)' },
+                    { text: 'High memory alert cleared',   time: '2 hr ago',   icon: Cpu,      color: 'var(--warning)'  },
                   ].map((e, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, paddingBottom: 12, borderBottom: i < 4 ? '1px solid var(--border-light)' : 'none' }}>
                       <e.icon size={13} color={e.color} strokeWidth={2} style={{ marginTop: 2, flexShrink: 0 }} />

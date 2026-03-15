@@ -1,7 +1,10 @@
 /**
- * Sidebar.jsx
- * Patient sidebar now includes "Prescriptions" nav item (Pill icon).
- * Doctor sidebar has collapsible "Analysis & Assignment" group.
+ * Sidebar.jsx — updated with Appointments nav items
+ *
+ * Changes:
+ *  - Patient: new "Appointments" nav item (CalendarDays icon)
+ *  - Doctor:  new "Appointments" nav item (CalendarDays icon)
+ *  - Both show a badge when there are pending appointment notifications
  */
 
 import { useState } from 'react'
@@ -9,6 +12,7 @@ import {
   Activity, Users, Home, Play, Clock, FileText,
   Settings, ChevronRight, Heart, User, MessageSquare,
   BarChart2, Shield, FlaskConical, ChevronDown, Dumbbell, Pill,
+  CalendarDays,
 } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
@@ -18,14 +22,16 @@ const NAV_ITEMS = {
     { id: 'monitor',       label: 'Rehab Monitor',   icon: Play          },
     { id: 'history',       label: 'Session History', icon: Clock         },
     { id: 'prescriptions', label: 'Prescriptions',   icon: Pill          },
+    { id: 'appointments',  label: 'Appointments',    icon: CalendarDays  },   // ← NEW
     { id: 'messages',      label: 'Messages',        icon: MessageSquare },
     { id: 'profile',       label: 'Profile',         icon: User          },
     { id: 'settings',      label: 'Settings',        icon: Settings      },
   ],
   doctor: [
-    { id: 'overview',  label: 'Overview',    icon: Home          },
-    { id: 'patients',  label: 'My Patients', icon: Users         },
-    { id: 'messages',  label: 'Messages',    icon: MessageSquare },
+    { id: 'overview',     label: 'Overview',    icon: Home          },
+    { id: 'patients',     label: 'My Patients', icon: Users         },
+    { id: 'appointments', label: 'Appointments', icon: CalendarDays  },   // ← NEW
+    { id: 'messages',     label: 'Messages',    icon: MessageSquare },
     {
       id: 'analysis_assignment',
       label: 'Analysis & Assignment',
@@ -55,7 +61,16 @@ const ROLE_META = {
 
 const SUB_IDS = ['report_analysis', 'exercise_assignment']
 
-export default function Sidebar({ role = 'patient', activeTab, onTabChange, unreadMessages = 0 }) {
+/**
+ * Props:
+ *  role              – 'patient' | 'doctor' | 'admin'
+ *  activeTab         – current active tab id
+ *  onTabChange       – (tabId: string) => void
+ *  unreadMessages    – number badge on Messages
+ *  pendingAppts      – number badge on Appointments (pending requests for doctor,
+ *                      or unread appt notifications for patient)
+ */
+export default function Sidebar({ role = 'patient', activeTab, onTabChange, unreadMessages = 0, pendingAppts = 0 }) {
   const { isDark } = useTheme()
   const items      = NAV_ITEMS[role] || NAV_ITEMS.patient
   const meta       = ROLE_META[role] || ROLE_META.patient
@@ -125,7 +140,11 @@ export default function Sidebar({ role = 'patient', activeTab, onTabChange, unre
           const hasSubItems   = !!item.subItems
           const isGroupActive = hasSubItems && SUB_IDS.includes(activeTab)
           const isActive      = !hasSubItems && activeTab === item.id
-          const badge         = item.id === 'messages' ? unreadMessages : 0
+
+          // badge logic
+          let badge = 0
+          if (item.id === 'messages')     badge = unreadMessages
+          if (item.id === 'appointments') badge = pendingAppts
 
           /* expandable group */
           if (hasSubItems) return (

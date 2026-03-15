@@ -15,8 +15,16 @@ class Config:
 
     # ── Database ──────────────────────────────────────────────────────────────
     # To use MySQL: set DATABASE_URL="mysql+pymysql://user:pass@host/dbname"
+    # Default to a deterministic SQLite file under backend/instance.
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+    os.makedirs(INSTANCE_DIR, exist_ok=True)
+    default_db = os.path.join(INSTANCE_DIR, "healthcare.db")
+    # Use forward slashes for SQLite URIs on Windows to avoid escaping issues.
+    default_db_uri = default_db.replace("\\", "/")
+
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "sqlite:///healthcare.db"
+        "DATABASE_URL", f"sqlite:///{default_db_uri}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
