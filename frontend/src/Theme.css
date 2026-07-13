@@ -1,0 +1,154 @@
+/* ── RehabMonitor Design Tokens ─────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  /* Brand */
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-light: #dbeafe;
+  --brand-border: #bfdbfe;
+
+  /* Surfaces */
+  --bg-app: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card2: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-navbar: #ffffff;
+  --bg-input: #f8fafc;
+  --bg-hover: #f1f5f9;
+  --bg-active: #eff6ff;
+  --bg-overlay: rgba(15, 23, 42, 0.45);
+
+  /* Borders */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #2563eb;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  /* Status */
+  --success: #22c55e;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --info: #0ea5e9;
+  --info-bg: #f0f9ff;
+  --info-border: #bae6fd;
+
+  /* Layout */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 80px;
+  --navbar-height: 72px;
+  --content-max-width: 1440px;
+  --content-padding-x: 24px;
+  --content-padding-y: 24px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Spacing (8pt grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Typography */
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --text-page-title: 36px;
+  --text-section-title: 28px;
+  --text-card-title: 22px;
+  --text-heading: 18px;
+  --text-body: 16px;
+  --text-secondary-size: 14px;
+  --text-caption: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-navbar: 0 1px 0 var(--border), 0 4px 16px rgba(15, 23, 42, 0.04);
+
+  /* Sidebar */
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #0f172a;
+  --sidebar-icon: #94a3b8;
+  --sidebar-icon-active: #2563eb;
+  --sidebar-active-bg: #eff6ff;
+
+  /* Scrollbar */
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+
+  /* Animation */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.35s ease;
+}
+
+[data-theme="dark"] {
+  --bg-app: #0a0e17;
+  --bg-card: #111827;
+  --bg-card2: #0f172a;
+  --bg-sidebar: #0d1117;
+  --bg-navbar: rgba(13, 17, 23, 0.92);
+  --bg-input: #1c2333;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(37, 99, 235, 0.12);
+  --bg-overlay: rgba(0, 0, 0, 0.75);
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.05);
+  --border-focus: #3b82f6;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0f172a;
+
+  --brand: #3b82f6;
+  --brand-hover: #60a5fa;
+  --brand-light: rgba(37, 99, 235, 0.12);
+  --brand-border: rgba(37, 99, 235, 0.25);
+
+  --success: #4ade80;
+  --success-bg: rgba(34, 197, 94, 0.1);
+  --success-border: rgba(34, 197, 94, 0.2);
+  --warning: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-border: rgba(245, 158, 11, 0.2);
+  --danger: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-border: rgba(239, 68, 68, 0.2);
+  --info: #38bdf8;
+  --info-bg: rgba(14, 165, 233, 0.1);
+  --info-border: rgba(14, 165, 233, 0.2);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-navbar: 0 1px 0 var(--border), 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #f1f5f9;
+  --sidebar-icon: #64748b;
+  --sidebar-icon-active: #60a5fa;
+  --sidebar-active-bg: rgba(37, 99, 235, 0.12);
+
+  --scrollbar-track: #111827;
+  --scrollbar-thumb: #374151;
+}
