@@ -1,0 +1,52 @@
+/* Compatibility layer: provide basic styles for legacy `panel-*` classes */
+
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  font-family: var(--font-family);
+}
+
+.panel-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #E2E8F0);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-card--flush { padding: 0; }
+
+.panel-empty { display:flex; align-items:center; gap:12px; padding:28px; color:var(--text-muted); }
+.panel-empty__icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:var(--bg-card2); border-radius:8px; }
+
+.panel-section-title { font-size:1rem; font-weight:700; margin-bottom:6px; }
+.panel-section-desc { font-size:0.9rem; color:var(--text-secondary); margin-bottom:12px }
+
+.panel-drop-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; }
+.panel-drop { border:1px dashed var(--border); padding:12px; border-radius:8px; cursor:pointer; background:var(--bg-card); }
+.panel-drop--filled { border-style:solid; }
+.panel-icon-box { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:var(--bg-card2); }
+
+.panel-btn { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:8px; cursor:pointer; border:1px solid transparent; background:var(--bg-card); }
+.panel-btn--primary { background:var(--brand); color:var(--text-inverse); }
+.panel-btn--success { background:var(--success); color:var(--text-inverse); }
+.panel-btn--danger-outline { background:transparent; border:1px solid var(--danger-border); color:var(--danger); }
+.panel-btn--block { width:100%; }
+
+.panel-note { background:var(--bg-card2); padding:10px; border-radius:8px; color:var(--text-secondary); }
+.panel-note--danger { background:var(--danger-bg); color:var(--danger); }
+.panel-note--brand { background:var(--bg-card2); color:var(--text-primary); }
+
+.panel-score { display:flex; align-items:center; gap:8px; }
+.panel-score__label { width:140px; color:var(--text-muted); font-weight:700; }
+.panel-score__track { flex:1; height:8px; background:var(--bg-card2); border-radius:999px; overflow:hidden }
+.panel-score__fill { height:100%; background:var(--brand); }
+.panel-score__pct { width:48px; text-align:right; font-weight:700 }
+
+.panel-badge { display:inline-flex; padding:6px 10px; border-radius:999px; font-weight:700; }
+.panel-badge--info { background:var(--brand-light); color:var(--brand); }
+.panel-badge--success { background:var(--success-bg); color:var(--success); }
+.panel-badge--warning { background:var(--warning-bg); color:var(--warning); }
+.panel-badge--danger { background:var(--danger-bg); color:var(--danger); }

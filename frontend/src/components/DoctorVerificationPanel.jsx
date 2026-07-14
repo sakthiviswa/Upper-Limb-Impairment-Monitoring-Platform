@@ -9,6 +9,7 @@ import { useToast } from './ToastProvider'
 import {
   UploadCloud, User, IdCard, FileBadge2, BadgeCheck, Clock,
   AlertCircle, CheckCircle2, XCircle, RefreshCw, Image as ImageIcon,
+  Eye, ShieldCheck, FileText, Sparkles,
 } from 'lucide-react'
 
 function Badge({ label, variant = 'default' }) {
@@ -80,6 +81,7 @@ export default function DoctorVerificationPanel() {
   const [faceImage,     setFaceImage]     = useState(null)
   const [governmentId,  setGovernmentId]  = useState(null)
   const [medicalCert,   setMedicalCert]   = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const loadStatus = useCallback(() => {
     setLoading(true)
@@ -96,26 +98,30 @@ export default function DoctorVerificationPanel() {
   const handleSubmit = async () => {
     if (!canSubmit) return
     setSubmitting(true)
+    setUploadProgress(10)
     try {
       const form = new FormData()
       form.append('face_image', faceImage)
       form.append('government_id', governmentId)
       form.append('medical_certificate', medicalCert)
 
+      setUploadProgress(35)
       const res = await api.post('/doctors/verify-certificate', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
 
+      setUploadProgress(100)
       setStatus(res.data)
       setFaceImage(null); setGovernmentId(null); setMedicalCert(null)
 
       const isAuto = res.data.status === 'auto_verified'
+      const score = res.data.overallScore ?? 0
       showToast({
         type: isAuto ? 'request_accepted' : 'doctor_request',
         title: isAuto ? 'Verified!' : 'Submitted for Review',
         message: isAuto
-          ? 'Your identity has been verified automatically.'
-          : 'Your documents were submitted and are pending admin review.',
+          ? `Your identity was verified automatically with ${score}/100 confidence.`
+          : `Your documents were submitted and are pending admin review with ${score}/100 confidence.`,
       })
     } catch (e) {
       showToast({
@@ -124,6 +130,7 @@ export default function DoctorVerificationPanel() {
       })
     } finally {
       setSubmitting(false)
+      setUploadProgress(0)
     }
   }
 
@@ -173,9 +180,34 @@ export default function DoctorVerificationPanel() {
                 <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand)' }}>{status.overallScore}/100</span>
               </div>
             )}
-            {status?.aiNotes && (
-              <div className="panel-note">{status.aiNotes}</div>
-            )}
+            {status?.aiNotes && (() => {
+              try {
+                const parsed = JSON.parse(status.aiNotes)
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="panel-note"><strong>Summary:</strong> {parsed.summary}</div>
+                    {parsed.reasons?.length > 0 && (
+                      <div className="panel-note panel-note--brand">
+                        <strong>Verification checks:</strong>
+                        <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+                          {parsed.reasons.map((reason, index) => <li key={index}>{reason}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {parsed.ocr_preview && (
+                      <div className="panel-note">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          <Eye size={13} strokeWidth={2} /> <strong>OCR preview</strong>
+                        </div>
+                        <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: 'var(--text-secondary)' }}>{parsed.ocr_preview.slice(0, 900)}</div>
+                      </div>
+                    )}
+                  </div>
+                )
+              } catch {
+                return <div className="panel-note">{status.aiNotes}</div>
+              }
+            })()}
             {status?.status === 'rejected' && status?.reviewNotes && (
               <div className="panel-note panel-note--danger">
                 <strong>Reviewer note:</strong> {status.reviewNotes}
@@ -210,6 +242,18 @@ export default function DoctorVerificationPanel() {
               file={medicalCert} onChange={setMedicalCert}
             />
           </div>
+
+          {submitting && (
+            <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+                <span><Sparkles size={12} strokeWidth={2} style={{ display: 'inline-block', marginRight: 4 }} /> Analyzing documents…</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: 'var(--bg-card2)', overflow: 'hidden' }}>
+                <div style={{ width: `${uploadProgress}%`, height: '100%', background: 'linear-gradient(90deg, var(--brand), var(--success))', transition: 'width 0.2s ease' }} />
+              </div>
+            </div>
+          )}
 
           <button
             type="button"

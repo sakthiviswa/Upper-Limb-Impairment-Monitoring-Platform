@@ -235,8 +235,14 @@ export default function DoctorProfileModal({ doctorId, onClose, onSelect, select
               {/* Action button */}
               {onSelect && (
                 <button
-                  onClick={() => { onSelect(doctor.id); onClose() }}
-                  disabled={selected}
+                  onClick={() => {
+                    if (!doctor.verified) {
+                      setError('This doctor is not verified yet and cannot be selected.')
+                      return
+                    }
+                    onSelect(doctor.id); onClose()
+                  }}
+                  disabled={selected || !doctor.verified}
                   style={{
                     width: '100%', padding: '12px', marginTop: 4,
                     background: selected ? 'var(--success-bg)' : 'var(--brand)',

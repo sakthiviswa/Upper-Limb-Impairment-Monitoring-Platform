@@ -4,6 +4,7 @@
 @import './styles/design-system.css';
 @import './styles/layout.css';
 @import './styles/panels.css';
+@import './styles/panel-compat.css';
 
 *, *::before, *::after {
   box-sizing: border-box;

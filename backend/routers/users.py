@@ -176,28 +176,33 @@ def update_profile(
         if new_doctor_id:
             new_doctor_id = int(new_doctor_id)
             if me.selected_doctor_id != new_doctor_id and not me.doctor_accepted:
-                me.selected_doctor_id = new_doctor_id
                 doctor = db.query(User).filter_by(id=new_doctor_id, role="doctor").first()
-                if doctor:
-                    old_requests = db.query(Notification).filter_by(
-                        sender_id=me.id, type="doctor_request", is_read=False,
-                    ).all()
-                    for old in old_requests:
-                        db.delete(old)
+                if not doctor:
+                    raise HTTPException(404, "Selected doctor not found")
+                # Only allow selection of doctors who are verified
+                if not doctor.verified:
+                    raise HTTPException(422, "Doctor is not verified")
 
-                    _send_notification(
-                        db,
-                        recipient_id=new_doctor_id,
-                        sender_id=me.id,
-                        notif_type="doctor_request",
-                        message=(
-                            f"{me.name} has selected you as their doctor and is "
-                            f"requesting your care. "
-                            f"Injury: {me.injury_type or 'N/A'}, "
-                            f"Severity: {me.injury_severity or 'N/A'}."
-                        ),
-                    )
-                    notified_doctor = True
+                me.selected_doctor_id = new_doctor_id
+                old_requests = db.query(Notification).filter_by(
+                    sender_id=me.id, type="doctor_request", is_read=False,
+                ).all()
+                for old in old_requests:
+                    db.delete(old)
+
+                _send_notification(
+                    db,
+                    recipient_id=new_doctor_id,
+                    sender_id=me.id,
+                    notif_type="doctor_request",
+                    message=(
+                        f"{me.name} has selected you as their doctor and is "
+                        f"requesting your care. "
+                        f"Injury: {me.injury_type or 'N/A'}, "
+                        f"Severity: {me.injury_severity or 'N/A'}."
+                    ),
+                )
+                notified_doctor = True
 
     try:
         db.commit()

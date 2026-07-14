@@ -74,6 +74,7 @@ def verify_certificate(
         face_image_path=face_path,
         government_id_path=id_path,
         medical_certificate_path=cert_path,
+        doctor_id=me.id,
     )
 
     record = DoctorVerification(
@@ -81,13 +82,25 @@ def verify_certificate(
         face_image_path=face_path,
         government_id_path=id_path,
         medical_certificate_path=cert_path,
-        **result,
+        government_id_ocr_text=result.get("government_id_ocr_text"),
+        medical_certificate_ocr_text=result.get("medical_certificate_ocr_text"),
+        extracted_id_name=result.get("extracted_id_name"),
+        extracted_id_number=result.get("extracted_id_number"),
+        extracted_cert_name=result.get("extracted_cert_name"),
+        extracted_registration_number=result.get("extracted_registration_number"),
+        extracted_issuing_authority=result.get("extracted_issuing_authority"),
+        face_match_score=result.get("face_match_score"),
+        name_match_score=result.get("name_match_score"),
+        field_completeness_score=result.get("field_completeness_score"),
+        overall_score=result.get("overall_score"),
+        status=result.get("status", "pending"),
+        ai_notes=result.get("ai_notes"),
     )
     db.add(record)
 
     # Auto-verified submissions flip the doctor's `verified` flag immediately.
     # Everything else waits for an admin to review it.
-    if result["status"] == "auto_verified":
+    if result.get("status") == "auto_verified":
         me.verified = True
 
     try:
@@ -179,8 +192,8 @@ def review_verification(
         raise HTTPException(403, "Forbidden")
 
     decision = (data.decision or "").lower()
-    if decision not in ("verified", "rejected"):
-        raise HTTPException(422, "decision must be 'verified' or 'rejected'")
+    if decision not in ("verified", "rejected", "manual_review"):
+        raise HTTPException(422, "decision must be 'verified', 'rejected', or 'manual_review'")
 
     record = db.query(DoctorVerification).filter_by(id=verification_id).first()
     if not record:

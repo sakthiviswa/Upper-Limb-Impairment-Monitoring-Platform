@@ -356,8 +356,15 @@ export default function ProfileSettings({ viewMode: propViewMode }) {
                         key={doc.id}
                         doc={doc}
                         selected={String(form.selectedDoctorId) === String(doc.id)}
-                        disabled={viewMode}
-                        onSelect={() => !viewMode && setForm(p => ({ ...p, selectedDoctorId: String(doc.id) }))}
+                        disabled={viewMode || !doc.verified}
+                        onSelect={() => {
+                          if (viewMode) return
+                          if (!doc.verified) {
+                            setError('This doctor is not verified yet and cannot be selected.')
+                            return
+                          }
+                          setForm(p => ({ ...p, selectedDoctorId: String(doc.id) }))
+                        }}
                         onViewProfile={() => setViewingDoctorId(doc.id)}
                       />
                     ))}

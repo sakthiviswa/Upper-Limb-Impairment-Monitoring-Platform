@@ -80,12 +80,35 @@ function VerificationRow({ v, onReview, expanded, onToggle, acting }) {
             <DetailRow label="Name Match"          value={v.nameMatchScore != null ? `${Math.round(v.nameMatchScore * 100)}%` : '—'} />
           </div>
 
-          {v.aiNotes && (
-            <div className="panel-note">{v.aiNotes}</div>
-          )}
+          {v.aiNotes && (() => {
+            try {
+              const parsed = JSON.parse(v.aiNotes)
+              return (
+                <div className="panel-note" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div><strong>Summary:</strong> {parsed.summary}</div>
+                  {parsed.reasons?.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {parsed.reasons.slice(0, 4).map((reason, idx) => (
+                        <span key={idx} style={{ padding: '4px 8px', borderRadius: 999, background: 'var(--bg-card2)', fontSize: 12 }}>
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {parsed.extracted_fields && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      Extracted: {Object.entries(parsed.extracted_fields).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join(' • ')}
+                    </div>
+                  )}
+                </div>
+              )
+            } catch {
+              return <div className="panel-note">{v.aiNotes}</div>
+            }
+          })()}
 
           {canReview && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 disabled={!!acting}
@@ -93,6 +116,14 @@ function VerificationRow({ v, onReview, expanded, onToggle, acting }) {
                 className="panel-btn panel-btn--success"
               >
                 <CheckCircle2 size={13} strokeWidth={2.5} /> Approve
+              </button>
+              <button
+                type="button"
+                disabled={!!acting}
+                onClick={() => onReview(v.id, 'manual_review')}
+                className="panel-btn"
+              >
+                <BadgeCheck size={13} strokeWidth={2.5} /> Manual Review
               </button>
               <button
                 type="button"
