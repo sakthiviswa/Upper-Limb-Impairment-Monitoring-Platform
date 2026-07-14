@@ -198,7 +198,7 @@ function MetaChip({ icon: Icon, label }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 12, color: 'var(--text-muted)',
+      fontSize: 'var(--text-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-family)',
       background: 'var(--bg-card2)', border: '1px solid var(--border-light)',
       borderRadius: 6, padding: '3px 8px',
     }}>
@@ -275,6 +275,7 @@ function MediaViewer({ name }) {
 function ExerciseCard({ exercise, index, totalCount }) {
   const [open, setOpen]           = useState(false)
   const [showMedia, setShowMedia] = useState(false)
+  const [hoveredStep, setHoveredStep] = useState(null)
   const ic    = INTENSITY[exercise.intensity] || INTENSITY.Low
   const media = getMedia(exercise.name)
   const steps = buildSteps(exercise)
@@ -315,14 +316,14 @@ function ExerciseCard({ exercise, index, totalCount }) {
         {/* Name + meta */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-family)' }}>
               {exercise.name}
             </span>
 
             {exercise.intensity && (
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-                color: ic.color, background: ic.bg, border: `1px solid ${ic.border}`,
+                fontSize: 'var(--text-caption)', fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                color: ic.color, background: ic.bg, border: `1px solid ${ic.border}`, fontFamily: 'var(--font-family)',
               }}>
                 <span style={{
                   display: 'inline-block', width: 5, height: 5, borderRadius: '50%',
@@ -334,8 +335,8 @@ function ExerciseCard({ exercise, index, totalCount }) {
 
             {media && (
               <span style={{
-                fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
-                display: 'inline-flex', alignItems: 'center', gap: 3,
+                fontSize: 'var(--text-caption)', fontWeight: 600, padding: '2px 7px', borderRadius: 99,
+                display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: 'var(--font-family)',
                 color:      media.type === 'video' ? '#2563EB' : '#0ea5e9',
                 background: media.type === 'video' ? 'rgba(37,99,235,0.1)' : 'rgba(14,165,233,0.1)',
                 border: `1px solid ${media.type === 'video' ? 'rgba(37,99,235,0.25)' : 'rgba(14,165,233,0.25)'}`,
@@ -380,8 +381,8 @@ function ExerciseCard({ exercise, index, totalCount }) {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '9px 16px', marginBottom: 18,
-              borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-              fontSize: 13, fontWeight: 600, transition: 'all 0.18s',
+              borderRadius: 8, cursor: 'pointer',
+              fontSize: 'var(--text-secondary-size)', fontWeight: 600, transition: 'all 0.18s', fontFamily: 'var(--font-family)',
               background: showMedia
                 ? (media?.type === 'video' ? 'rgba(37,99,235,0.12)' : 'rgba(14,165,233,0.12)')
                 : 'var(--bg-card2)',
@@ -415,13 +416,13 @@ function ExerciseCard({ exercise, index, totalCount }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
               <BookOpen size={13} color="var(--text-muted)" strokeWidth={2} />
               <span style={{
-                fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.09em', color: 'var(--text-muted)',
+                fontSize: 'var(--text-caption)', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.09em', color: 'var(--text-muted)', fontFamily: 'var(--font-family)',
               }}>
                 Step-by-Step Instructions
               </span>
               <span style={{
-                fontSize: 10, color: 'var(--text-muted)',
+                fontSize: 'var(--text-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-family)',
                 background: 'var(--bg-card2)', border: '1px solid var(--border-light)',
                 borderRadius: 4, padding: '1px 6px',
               }}>
@@ -430,30 +431,40 @@ function ExerciseCard({ exercise, index, totalCount }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {steps.map((step, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 12, alignItems: 'flex-start',
-                  padding: '11px 14px', borderRadius: 10,
-                  background: 'var(--bg-card2)', border: '1px solid var(--border-light)',
-                }}>
+              {steps.map((step, i) => {
+                const isActiveStep = i === 0 || hoveredStep === i
+                return (
+                <div
+                  key={i}
+                  onMouseEnter={() => setHoveredStep(i)}
+                  onMouseLeave={() => setHoveredStep(null)}
+                  style={{
+                    display: 'flex', gap: 12, alignItems: 'flex-start',
+                    padding: '11px 14px', borderRadius: 10,
+                    background: isActiveStep ? 'var(--brand-light)' : 'var(--bg-card2)',
+                    border: `1px solid ${isActiveStep ? 'var(--brand-border)' : 'var(--border-light)'}`,
+                    transition: 'all 0.2s',
+                    transform: isActiveStep ? 'translateY(-1px)' : 'translateY(0)',
+                  }}>
                   <div style={{
                     width: 24, height: 24, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                    background: i === 0 ? 'var(--brand)' : 'var(--bg-card)',
-                    border: `2px solid ${i === 0 ? 'var(--brand)' : 'var(--border)'}`,
+                    background: isActiveStep ? 'var(--brand)' : 'var(--bg-card)',
+                    border: `2px solid ${isActiveStep ? 'var(--brand)' : 'var(--border)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <span style={{
-                      fontSize: 10, fontWeight: 800, fontFamily: 'monospace',
-                      color: i === 0 ? '#fff' : 'var(--text-muted)',
+                      fontSize: 'var(--text-caption)', fontWeight: 800, fontFamily: 'var(--font-family)',
+                      color: isActiveStep ? '#fff' : 'var(--text-muted)',
                     }}>
                       {i + 1}
                     </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  <p style={{ margin: 0, fontSize: 'var(--text-secondary-size)', color: 'var(--text-secondary)', lineHeight: 1.6, fontFamily: 'var(--font-family)' }}>
                     {step}
                   </p>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -465,12 +476,12 @@ function ExerciseCard({ exercise, index, totalCount }) {
               borderLeft: '3px solid var(--brand)',
             }}>
               <div style={{
-                fontSize: 10, fontWeight: 700, color: 'var(--brand)',
-                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5,
+                fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--brand)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5, fontFamily: 'var(--font-family)',
               }}>
                 Therapist Note
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: 'var(--text-secondary-size)', color: 'var(--text-secondary)', lineHeight: 1.6, fontFamily: 'var(--font-family)' }}>
                 {exercise.notes}
               </p>
             </div>
@@ -485,7 +496,7 @@ function ExerciseCard({ exercise, index, totalCount }) {
                 transition: 'width 0.4s',
               }} />
             </div>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+            <span style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', flexShrink: 0, fontFamily: 'var(--font-family)' }}>
               {index + 1} / {totalCount}
             </span>
           </div>
@@ -507,8 +518,8 @@ function CtrlBtn({ onClick, label }) {
       style={{
         padding: '4px 10px', background: 'var(--bg-card2)',
         border: '1px solid var(--border)', borderRadius: 6,
-        fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)',
-        cursor: 'pointer', fontFamily: 'inherit',
+        fontSize: 'var(--text-caption)', fontWeight: 600, color: 'var(--text-secondary)',
+        cursor: 'pointer', fontFamily: 'var(--font-family)',
       }}
     >
       {label}
@@ -559,7 +570,7 @@ function AssignmentBatch({ assignment, defaultOpen }) {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-family)' }}>
                 Exercise Plan #{assignment.id}
               </span>
               {done && (
@@ -616,7 +627,7 @@ function AssignmentBatch({ assignment, defaultOpen }) {
               }}>
                 Doctor's Instructions
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+              <p style={{ margin: 0, fontSize: 'var(--text-secondary-size)', color: 'var(--text-secondary)', lineHeight: 1.65, fontFamily: 'var(--font-family)' }}>
                 {assignment.doctorNote}
               </p>
             </div>
@@ -624,8 +635,8 @@ function AssignmentBatch({ assignment, defaultOpen }) {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{
-              fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '0.08em', color: 'var(--text-muted)',
+              fontSize: 'var(--text-caption)', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'var(--font-family)',
             }}>
               {assignment.exercises.length} Exercises
             </span>
@@ -655,8 +666,8 @@ function AssignmentBatch({ assignment, defaultOpen }) {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',
-                fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit', transition: 'all 0.2s',
+                fontSize: 'var(--text-secondary-size)', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+                fontFamily: 'var(--font-family)', transition: 'all 0.2s',
                 background: saving ? 'var(--bg-card2)' : 'var(--success)',
                 color:      saving ? 'var(--text-muted)' : '#fff',
                 opacity:    saving ? 0.7 : 1,
@@ -674,7 +685,7 @@ function AssignmentBatch({ assignment, defaultOpen }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '12px', background: 'var(--success-bg)',
               border: '1px solid var(--success-border)', borderRadius: 10,
-              color: 'var(--success)', fontSize: 13, fontWeight: 600,
+              color: 'var(--success)', fontSize: 'var(--text-secondary-size)', fontWeight: 600, fontFamily: 'var(--font-family)',
             }}>
               <Award size={15} strokeWidth={2} /> Great job! Plan completed.
             </div>
@@ -711,7 +722,7 @@ export default function PrescriptionsPanel() {
     }}>
       <style>{`@keyframes prx-spin{to{transform:rotate(360deg)}}`}</style>
       <RefreshCw size={16} strokeWidth={2} style={{ animation: 'prx-spin 0.8s linear infinite' }} />
-      <span style={{ fontSize: 13, fontWeight: 500 }}>Loading your prescriptions…</span>
+      <span style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 500, fontFamily: 'var(--font-family)' }}>Loading your prescriptions…</span>
     </div>
   )
 
@@ -726,7 +737,7 @@ export default function PrescriptionsPanel() {
             <Pill size={20} strokeWidth={2} />
           </div>
           <div>
-            <h1 className="fp-header__title" style={{ fontSize: 22 }}>My Prescriptions</h1>
+            <h1 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>My Prescriptions</h1>
             <p className="fp-header__sub">
               Exercise plans prescribed by your doctor — follow each step carefully
             </p>
@@ -742,7 +753,7 @@ export default function PrescriptionsPanel() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px',
           background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
-          borderRadius: 10, color: 'var(--danger)', fontSize: 13,
+          borderRadius: 10, color: 'var(--danger)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)',
         }}>
           <AlertCircle size={15} strokeWidth={2} /> {error}
         </div>
@@ -763,10 +774,10 @@ export default function PrescriptionsPanel() {
           }}>
             <Dumbbell size={28} strokeWidth={1} color="#2563EB" style={{ opacity: 0.5 }} />
           </div>
-          <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: 'var(--text-heading)', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font-family)' }}>
             No prescriptions yet
           </h3>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.65, maxWidth: 360 }}>
+          <p style={{ margin: 0, fontSize: 'var(--text-secondary-size)', color: 'var(--text-muted)', lineHeight: 1.65, maxWidth: 360, fontFamily: 'var(--font-family)' }}>
             Your doctor hasn't assigned any exercises yet. Once they create a plan, it will
             appear here with step-by-step instructions and demo videos.
           </p>
@@ -802,12 +813,12 @@ export default function PrescriptionsPanel() {
                 </div>
                 <div>
                   <div style={{
-                    fontSize: 22, fontWeight: 700, color: 'var(--text-primary)',
-                    lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+                    fontSize: 'var(--text-card-title)', fontWeight: 700, color: 'var(--text-primary)',
+                    lineHeight: 1, fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-family)',
                   }}>
                     {value}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, fontWeight: 500 }}>
+                  <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginTop: 3, fontWeight: 500, fontFamily: 'var(--font-family)' }}>
                     {label}
                   </div>
                 </div>

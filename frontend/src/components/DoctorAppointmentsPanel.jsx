@@ -40,7 +40,7 @@ function SectionHead({ title, subtitle, action }) {
   return (
     <div className="fp-card__head">
       <div>
-        <div className="fp-card__title" style={{ fontSize: 16 }}>{title}</div>
+        <div className="fp-card__title" style={{ fontSize: 'var(--text-heading)' }}>{title}</div>
         {subtitle && <div className="fp-card__sub">{subtitle}</div>}
       </div>
       {action}
@@ -62,10 +62,10 @@ function DateDisplay({ iso }) {
   const d = new Date(iso)
   return (
     <div>
-      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>
+      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
         {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+      <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginTop: 1, fontFamily: 'var(--font-family)' }}>
         {d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
       </div>
     </div>
@@ -135,7 +135,7 @@ export default function DoctorAppointmentsPanel() {
   const history   = appointments.filter(a => !['pending'].includes(a.status) && !(a.status === 'confirmed' && new Date(a.appointment_date) > new Date()))
 
   if (loading) return (
-    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
       <Loader2 size={20} style={{ animation: 'spin 0.7s linear infinite', marginBottom: 8 }} />
       <div>Loading appointments…</div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -152,7 +152,7 @@ export default function DoctorAppointmentsPanel() {
             <CalendarDays size={22} strokeWidth={2} />
           </div>
           <div>
-            <h2 className="fp-header__title" style={{ fontSize: 22 }}>Appointments</h2>
+            <h2 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>Appointments</h2>
             <p className="fp-header__sub">
               Manage patient appointment requests and your schedule
             </p>
@@ -171,7 +171,7 @@ export default function DoctorAppointmentsPanel() {
       {/* ── Pending requests ── */}
       {pending.length > 0 && (
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          <div style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, fontFamily: 'var(--font-family)' }}>
             Pending Requests ({pending.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -195,10 +195,10 @@ export default function DoctorAppointmentsPanel() {
                         : <MapPin size={18} color="#0EA5E9" strokeWidth={2} />}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-secondary-size)', color: 'var(--text-primary)', marginBottom: 4, fontFamily: 'var(--font-family)' }}>
                         {appt.patient_name || 'Patient'}
                       </div>
-                      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-muted)' }}>
+                      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--text-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-family)' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <CalendarDays size={11} strokeWidth={2} />
                           {new Date(appt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -215,12 +215,12 @@ export default function DoctorAppointmentsPanel() {
                         </span>
                       </div>
                       {appt.reason && (
-                        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                        <div style={{ marginTop: 6, fontSize: 'var(--text-caption)', color: 'var(--text-secondary)', fontStyle: 'italic', fontFamily: 'var(--font-family)' }}>
                           "{appt.reason}"
                         </div>
                       )}
                       {appt.type === 'offline' && appt.location && (
-                        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ marginTop: 4, fontSize: 'var(--text-caption)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-family)' }}>
                           <MapPin size={11} strokeWidth={2} /> {appt.location}
                         </div>
                       )}
@@ -254,7 +254,7 @@ export default function DoctorAppointmentsPanel() {
                   <div style={{
                     marginTop: 12, padding: '10px 12px', borderRadius: 8,
                     background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(37,99,235,0.2)',
-                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 12,
+                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-caption)', fontFamily: 'var(--font-family)',
                   }}>
                     <Video size={13} color="#2563EB" strokeWidth={2} />
                     <span style={{ color: 'var(--text-secondary)', flex: 1 }}>
@@ -288,11 +288,11 @@ export default function DoctorAppointmentsPanel() {
         {upcoming.length === 0 ? (
           <div style={{ padding: '2.5rem', textAlign: 'center' }}>
             <Calendar size={24} strokeWidth={1} style={{ marginBottom: 8, opacity: 0.25, color: 'var(--text-muted)' }} />
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>No upcoming appointments</div>
+            <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'var(--font-family)' }}>No upcoming appointments</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
               <thead>
                 <tr>
                   {['Date & Time', 'Patient', 'Type', 'Duration', 'Meet / Location', 'Actions'].map(h => (
@@ -322,7 +322,7 @@ export default function DoctorAppointmentsPanel() {
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        fontSize: 12, fontWeight: 600,
+                        fontSize: 'var(--text-secondary-size)', fontWeight: 600,
                         color: appt.type === 'online' ? '#2563EB' : '#2563EB',
                       }}>
                         {appt.type === 'online'
@@ -331,7 +331,7 @@ export default function DoctorAppointmentsPanel() {
                         {appt.type === 'online' ? 'Online' : 'In-Clinic'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>
+                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Clock size={11} strokeWidth={2} /> {appt.duration_mins} min
                       </div>
@@ -345,15 +345,15 @@ export default function DoctorAppointmentsPanel() {
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             padding: '5px 10px', background: '#1a73e8', color: '#fff',
-                            borderRadius: 7, fontSize: 11, fontWeight: 600,
-                            textDecoration: 'none',
+                            borderRadius: 7, fontSize: 'var(--text-caption)', fontWeight: 600,
+                            textDecoration: 'none', fontFamily: 'var(--font-family)',
                           }}
                         >
                           <Video size={11} strokeWidth={2} /> Join Meet
                           <ExternalLink size={10} strokeWidth={2} />
                         </a>
                       ) : appt.location ? (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-family)' }}>
                           <MapPin size={11} strokeWidth={2} />
                           {appt.location.length > 28 ? appt.location.slice(0, 28) + '…' : appt.location}
                         </span>
@@ -367,9 +367,9 @@ export default function DoctorAppointmentsPanel() {
                           display: 'inline-flex', alignItems: 'center', gap: 4,
                           padding: '5px 10px', background: 'var(--bg-card)',
                           color: 'var(--danger)', border: '1px solid var(--danger-border)',
-                          borderRadius: 7, fontSize: 11, fontWeight: 600,
+                          borderRadius: 7, fontSize: 'var(--text-caption)', fontWeight: 600,
                           cursor: acting[appt.id] ? 'not-allowed' : 'pointer',
-                          opacity: acting[appt.id] ? 0.6 : 1, fontFamily: 'inherit',
+                          opacity: acting[appt.id] ? 0.6 : 1, fontFamily: 'var(--font-family)',
                         }}
                       >
                         <X size={11} strokeWidth={2.5} />
@@ -392,23 +392,23 @@ export default function DoctorAppointmentsPanel() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               width: '100%', padding: '14px 20px', background: 'none', border: 'none',
-              cursor: 'pointer', fontFamily: 'inherit',
+              cursor: 'pointer', fontFamily: 'var(--font-family)',
             }}
           >
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>
+            <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left', fontFamily: 'var(--font-family)' }}>
               Past & Cancelled ({history.length})
             </div>
             <ChevronDown size={14} color="var(--text-muted)" style={{ transform: showHistory ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
           {showHistory && (
             <div style={{ borderTop: '1px solid var(--border-light)', overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
                 <thead>
                   <tr>
                     {['Date & Time', 'Patient', 'Type', 'Status'].map(h => (
                       <th key={h} style={{
                         padding: '10px 16px', textAlign: 'left',
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                        fontSize: 'var(--text-caption)', fontWeight: 700, letterSpacing: '0.08em',
                         textTransform: 'uppercase', color: 'var(--text-muted)',
                         background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)',
                       }}>
@@ -429,8 +429,8 @@ export default function DoctorAppointmentsPanel() {
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12,
-                          color: appt.type === 'online' ? '#2563EB' : '#0EA5E9', fontWeight: 600,
+                          display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-caption)',
+                          color: appt.type === 'online' ? '#2563EB' : '#0EA5E9', fontWeight: 600, fontFamily: 'var(--font-family)',
                         }}>
                           {appt.type === 'online' ? <Video size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
                           {appt.type === 'online' ? 'Online' : 'In-Clinic'}

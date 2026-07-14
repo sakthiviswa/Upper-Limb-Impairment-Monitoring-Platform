@@ -50,7 +50,7 @@ function SectionHead({ title, subtitle }) {
   return (
     <div className="fp-card__head">
       <div>
-        <div className="fp-card__title" style={{ fontSize: 16 }}>{title}</div>
+        <div className="fp-card__title" style={{ fontSize: 'var(--text-heading)' }}>{title}</div>
         {subtitle && <div className="fp-card__sub">{subtitle}</div>}
       </div>
     </div>
@@ -178,7 +178,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
               <CalendarDays size={22} strokeWidth={2} />
             </div>
             <div>
-              <h2 className="fp-header__title" style={{ fontSize: 22 }}>Appointments</h2>
+              <h2 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>Appointments</h2>
               <p className="fp-header__sub">
                 Schedule and manage your appointments with {assignedDoctorName ? `Dr. ${assignedDoctorName}` : 'your doctor'}
               </p>
@@ -230,13 +230,13 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
                 <thead>
                   <tr>
                     {['Date & Time', 'Doctor', 'Type', 'Duration', 'Status', 'Actions'].map(h => (
                       <th key={h} style={{
                         padding: '10px 16px', textAlign: 'left',
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                        fontSize: 'var(--text-caption)', fontWeight: 700, letterSpacing: '0.08em',
                         textTransform: 'uppercase', color: 'var(--text-muted)',
                         background: 'var(--bg-card2)', borderBottom: '1px solid var(--border-light)',
                       }}>
@@ -255,10 +255,10 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                     >
                       {/* Date */}
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
                           {new Date(appt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'var(--font-family)' }}>
                           {new Date(appt.appointment_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
@@ -270,7 +270,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 12, fontWeight: 600,
+                          fontSize: 'var(--text-secondary-size)', fontWeight: 600,
                           color: appt.type === 'online' ? '#2563EB' : '#0EA5E9',
                         }}>
                           {appt.type === 'online'
@@ -280,7 +280,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                         </span>
                       </td>
                       {/* Duration */}
-                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 12 }}>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Clock size={11} strokeWidth={2} /> {appt.duration_mins} min
                         </div>
@@ -301,8 +301,8 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                               style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 4,
                                 padding: '5px 10px', background: '#1a73e8', color: '#fff',
-                                border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 600,
-                                cursor: 'pointer', textDecoration: 'none', fontFamily: 'inherit',
+                                border: 'none', borderRadius: 7, fontSize: 'var(--text-caption)', fontWeight: 600,
+                                cursor: 'pointer', textDecoration: 'none', fontFamily: 'var(--font-family)',
                               }}
                             >
                               <Video size={11} strokeWidth={2} /> Join Meet
@@ -313,7 +313,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                           {appt.type === 'offline' && appt.location && (
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4,
-                              fontSize: 11, color: 'var(--text-muted)',
+                              fontSize: 'var(--text-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-family)',
                             }}>
                               <MapPin size={11} strokeWidth={2} />
                               {appt.location.length > 24 ? appt.location.slice(0, 24) + '…' : appt.location}
@@ -328,9 +328,9 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                                 display: 'inline-flex', alignItems: 'center', gap: 4,
                                 padding: '5px 10px', background: 'var(--bg-card)',
                                 color: 'var(--danger)', border: '1px solid var(--danger-border)',
-                                borderRadius: 7, fontSize: 11, fontWeight: 600,
+                                borderRadius: 7, fontSize: 'var(--text-caption)', fontWeight: 600,
                                 cursor: cancelling[appt.id] ? 'not-allowed' : 'pointer',
-                                opacity: cancelling[appt.id] ? 0.6 : 1, fontFamily: 'inherit',
+                                opacity: cancelling[appt.id] ? 0.6 : 1, fontFamily: 'var(--font-family)',
                               }}
                             >
                               <X size={11} strokeWidth={2.5} />
@@ -363,7 +363,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
             ← Back
           </button>
           <div>
-            <h2 className="fp-header__title" style={{ fontSize: 22 }}>Book Appointment</h2>
+            <h2 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>Book Appointment</h2>
             <p className="fp-header__sub">
               with {assignedDoctorName ? `Dr. ${assignedDoctorName}` : 'your doctor'}
             </p>
@@ -408,10 +408,10 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                       <Icon size={16} color={sel ? opt.color : 'var(--text-muted)'} strokeWidth={2} />
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: sel ? opt.color : 'var(--text-primary)' }}>
+                      <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 700, color: sel ? opt.color : 'var(--text-primary)', fontFamily: 'var(--font-family)' }}>
                         {opt.label}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{opt.sub}</div>
+                      <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginTop: 1, fontFamily: 'var(--font-family)' }}>{opt.sub}</div>
                     </div>
                     {sel && (
                       <CheckCircle size={15} color={opt.color} strokeWidth={2} style={{ marginLeft: 'auto' }} />
@@ -428,7 +428,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 9, marginBottom: 16,
               background: 'rgba(37,99,235,0.07)', border: '1px solid rgba(37,99,235,0.2)',
-              fontSize: 12, color: '#2563EB',
+              fontSize: 'var(--text-caption)', color: '#2563EB', fontFamily: 'var(--font-family)',
             }}>
               <Video size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
               A Google Meet link will be automatically generated and shared once the doctor confirms.
@@ -481,8 +481,8 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                     border: duration === d.value ? '1.5px solid var(--brand)' : '1px solid var(--border)',
                     background: duration === d.value ? 'var(--brand-light)' : 'var(--bg-card2)',
                     color: duration === d.value ? 'var(--brand)' : 'var(--text-secondary)',
-                    fontSize: 13, fontWeight: duration === d.value ? 700 : 400,
-                    fontFamily: 'inherit', transition: 'all 0.12s',
+                    fontSize: 'var(--text-secondary-size)', fontWeight: duration === d.value ? 700 : 400,
+                    fontFamily: 'var(--font-family)', transition: 'all 0.12s',
                   }}
                 >
                   {d.label}
@@ -533,7 +533,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 14px', borderRadius: 8, marginBottom: 14,
               background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
-              fontSize: 13, color: 'var(--danger)',
+              fontSize: 'var(--text-secondary-size)', color: 'var(--danger)', fontFamily: 'var(--font-family)',
             }}>
               <AlertCircle size={14} strokeWidth={2} style={{ flexShrink: 0 }} /> {formError}
             </div>
@@ -546,7 +546,7 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
               style={{
                 padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)',
                 background: 'var(--bg-card)', color: 'var(--text-secondary)',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--text-secondary-size)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family)',
               }}
             >
               Cancel
@@ -558,8 +558,8 @@ export default function BookAppointmentPanel({ assignedDoctorId, assignedDoctorN
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '10px 24px', borderRadius: 8, border: 'none',
                 background: submitting ? 'var(--border)' : 'var(--brand)',
-                color: '#fff', fontSize: 13, fontWeight: 700,
-                cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                color: '#fff', fontSize: 'var(--text-secondary-size)', fontWeight: 700,
+                cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-family)',
               }}
             >
               {submitting

@@ -64,20 +64,35 @@ function usePrescriptionCount(fallback = 0) {
 /* ─────────────────────────────────────────────────────────────────────
    HOOK – live total rehab session count
 ───────────────────────────────────────────────────────────────────── */
-function useTotalSessions(rehabPatientId) {
+function useTotalSessions(rehabPatientId, refreshKey = 0) {
   const [count,  setCount]  = useState(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    if (!rehabPatientId) return
-    rehabApi.get(`/api/sessions?patient_id=${rehabPatientId}`)
+    if (!rehabPatientId) {
+      setCount(0)
+      setLoaded(true)
+      return
+    }
+
+    let cancelled = false
+    setLoaded(false)
+
+    rehabApi.get(`/api/sessions/patient/${rehabPatientId}`)
       .then(r => {
-        const sessions = r.data?.sessions ?? r.data ?? []
+        if (cancelled) return
+        const sessions = Array.isArray(r.data) ? r.data : (r.data?.sessions ?? [])
         setCount(Array.isArray(sessions) ? sessions.length : 0)
       })
-      .catch(() => setCount(0))
-      .finally(() => setLoaded(true))
-  }, [rehabPatientId])
+      .catch(() => {
+        if (!cancelled) setCount(0)
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true)
+      })
+
+    return () => { cancelled = true }
+  }, [rehabPatientId, refreshKey])
 
   return {
     totalSessions:       count ?? 0,
@@ -106,6 +121,8 @@ export default function PatientDashboard() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [pendingAppts,   setPendingAppts]   = useState(0)
   const [liveAppts,      setLiveAppts]      = useState(null)
+  const [sessionRefreshKey, setSessionRefreshKey] = useState(0)
+  const [liveSessionCount, setLiveSessionCount] = useState(0)
 
   // ── Listen for Navbar profile/settings clicks ──
   useEffect(() => {
@@ -179,7 +196,18 @@ export default function PatientDashboard() {
   }, [user])
 
   /* ── Total sessions count ── */
-  const { totalSessions, totalSessionsLoaded } = useTotalSessions(rehabPatient?.id)
+  const { totalSessions, totalSessionsLoaded } = useTotalSessions(rehabPatient?.id, sessionRefreshKey)
+
+  useEffect(() => {
+    if (!rehabPatient?.id) {
+      setLiveSessionCount(0)
+      return
+    }
+
+    if (totalSessionsLoaded) {
+      setLiveSessionCount(totalSessions)
+    }
+  }, [rehabPatient?.id, totalSessions, totalSessionsLoaded])
 
   const patientForRehab = rehabPatient
     ? {
@@ -292,7 +320,7 @@ export default function PatientDashboard() {
                 />
                 <StatCard
                   label="Total Sessions"
-                  value={totalSessionsLoaded ? totalSessions : (rehabPatient ? undefined : 0)}
+                  value={totalSessionsLoaded ? liveSessionCount : (rehabPatient ? undefined : 0)}
                   icon={BarChart2}
                   color="#10b981"
                   loading={!!rehabPatient && !totalSessionsLoaded}
@@ -563,7 +591,12 @@ export default function PatientDashboard() {
             : (
               <MonitoringSession
                 patient={patientForRehab}
-                onSessionComplete={s => { setLast(s); setTimeout(() => setTab('history'), 2500) }}
+                onSessionComplete={s => {
+                  setLast(s)
+                  setLiveSessionCount(prev => prev + 1)
+                  setSessionRefreshKey(prev => prev + 1)
+                  setTimeout(() => setTab('history'), 2500)
+                }}
               />
             )
           }
@@ -573,7 +606,11 @@ export default function PatientDashboard() {
       {/* ─────────── HISTORY ─────────── */}
       {tab === 'history' && (
         <PageSection title="Session History" subtitle="Your past rehabilitation sessions and angle progression">
-          <SessionHistory patient={patientForRehab} />
+          <SessionHistory
+            patient={patientForRehab}
+            sessionCount={totalSessionsLoaded ? liveSessionCount : undefined}
+            refreshKey={sessionRefreshKey}
+          />
         </PageSection>
       )}
 

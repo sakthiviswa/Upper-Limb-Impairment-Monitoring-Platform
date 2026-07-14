@@ -27,15 +27,16 @@ function Card({ children, style = {}, noPad }) {
 }
 
 const inputStyle = {
-  width: '100%', padding: '10px 12px', fontSize: 13,
+  width: '100%', padding: '10px 12px', fontSize: 'var(--text-secondary-size)',
   background: 'var(--bg-card)', color: 'var(--text-primary)',
   border: '1px solid var(--border)', borderRadius: 8,
-  outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+  outline: 'none', fontFamily: 'var(--font-family)', boxSizing: 'border-box',
 }
 
 const labelStyle = {
-  display: 'block', fontSize: 11, fontWeight: 600,
+  display: 'block', fontSize: 'var(--text-caption)', fontWeight: 600,
   color: 'var(--text-muted)', marginBottom: 4, letterSpacing: '0.04em',
+  fontFamily: 'var(--font-family)',
 }
 
 function SpinIcon() {
@@ -67,7 +68,7 @@ function PatientPicker({ patients, loading, selectedId, onSelect }) {
         Select Patient
       </div>
       {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>
           <style>{`@keyframes aa-spin { to { transform: rotate(360deg) } }`}</style>
           <RefreshCw size={13} style={{ animation: 'aa-spin 0.8s linear infinite' }} />
           Loading patients…
@@ -81,16 +82,16 @@ function PatientPicker({ patients, loading, selectedId, onSelect }) {
               key={p.id}
               onClick={() => onSelect(p)}
               style={{
-                padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                padding: '7px 14px', borderRadius: 8, fontSize: 'var(--text-secondary-size)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'var(--font-family)', transition: 'all 0.15s',
                 background: selectedId === p.id ? 'var(--brand)' : 'var(--bg-card2)',
                 color:      selectedId === p.id ? '#fff'       : 'var(--text-secondary)',
                 border: `1px solid ${selectedId === p.id ? 'var(--brand)' : 'var(--border)'}`,
               }}
             >
-              <div style={{ fontSize: 13 }}>{p.name}</div>
+              <div style={{ fontSize: 'var(--text-secondary-size)', fontFamily: 'var(--font-family)' }}>{p.name}</div>
               {p.injuryType && (
-                <div style={{ fontSize: 10, opacity: 0.7, marginTop: 1 }}>{p.injuryType}</div>
+                <div style={{ fontSize: 'var(--text-caption)', opacity: 0.7, marginTop: 1, fontFamily: 'var(--font-family)' }}>{p.injuryType}</div>
               )}
             </button>
           ))}
@@ -161,7 +162,7 @@ function DoctorInsightBox({ session, patientId, showToast }) {
           border: `1px solid ${saved ? 'var(--success-border)' : 'var(--border)'}`,
           borderRadius: 7, fontSize: 12, fontWeight: 600,
           cursor: saving ? 'not-allowed' : 'pointer',
-          fontFamily: 'inherit', opacity: saving ? 0.7 : 1, transition: 'all 0.2s',
+          fontFamily: 'var(--font-family)', opacity: saving ? 0.7 : 1, transition: 'all 0.2s',
         }}
       >
         {saved    && <><CheckCircle size={12} strokeWidth={2.5} /> Saved</>}
@@ -301,7 +302,7 @@ export default function AnalysisAssignment({ subTab }) {
               <BarChart2 size={22} strokeWidth={2} />
             </div>
             <div>
-              <h1 className="fp-header__title" style={{ fontSize: 22 }}>Report Analysis</h1>
+              <h1 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>Report Analysis</h1>
               <p className="fp-header__sub">
                 Review patient session reports, angle data and movement graphs
               </p>
@@ -348,10 +349,10 @@ export default function AnalysisAssignment({ subTab }) {
                         <cfg.Icon size={16} color={cfg.color} strokeWidth={2} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                        <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-family)' }}>
                           Session #{s.id}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'var(--font-family)' }}>
                           {new Date(s.created_at).toLocaleString()}
                         </div>
                       </div>
@@ -372,10 +373,10 @@ export default function AnalysisAssignment({ subTab }) {
                         border: `1px solid ${hi ? 'var(--brand-border)' : 'var(--border)'}`,
                         borderRadius: 10, padding: '10px 8px', textAlign: 'center',
                       }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'monospace', color: hi ? 'var(--brand)' : 'var(--text-primary)' }}>
+                        <div style={{ fontSize: 'var(--text-body)', fontWeight: 700, fontFamily: 'var(--font-family)', color: hi ? 'var(--brand)' : 'var(--text-primary)' }}>
                           {value}
                         </div>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginTop: 3 }}>
+                        <div style={{ fontSize: 'var(--text-caption)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginTop: 3, fontFamily: 'var(--font-family)' }}>
                           {label}
                         </div>
                       </div>
@@ -414,7 +415,7 @@ export default function AnalysisAssignment({ subTab }) {
               <Dumbbell size={22} strokeWidth={2} />
             </div>
             <div>
-              <h1 className="fp-header__title" style={{ fontSize: 22 }}>Exercise Assignment</h1>
+              <h1 className="fp-header__title" style={{ fontSize: 'var(--text-card-title)' }}>Exercise Assignment</h1>
               <p className="fp-header__sub">
                 Prescribe rehabilitation exercises for your patient
               </p>
@@ -433,7 +434,7 @@ export default function AnalysisAssignment({ subTab }) {
             {/* ── Left: Library + Custom ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <Card>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>
+                <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10, fontFamily: 'var(--font-family)' }}>
                   Exercise Library
                 </div>
 
@@ -441,8 +442,8 @@ export default function AnalysisAssignment({ subTab }) {
                 <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
                   {Object.keys(EXERCISE_PRESETS).map(cat => (
                     <button key={cat} onClick={() => setCategory(cat)} style={{
-                      padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
+                      padding: '6px 14px', borderRadius: 8, fontSize: 'var(--text-caption)', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-family)', textTransform: 'capitalize',
                       background: category === cat ? 'var(--brand)' : 'var(--bg-card2)',
                       color:      category === cat ? '#fff'       : 'var(--text-secondary)',
                       border: `1px solid ${category === cat ? 'var(--brand)' : 'var(--border)'}`,
@@ -477,10 +478,10 @@ export default function AnalysisAssignment({ subTab }) {
                               {ex.intensity}
                             </span>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+                          <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', marginBottom: 4, fontFamily: 'var(--font-family)' }}>
                             {ex.sets} sets × {ex.reps} reps {ex.duration !== '—' ? `· ${ex.duration}` : ''}
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                          <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-secondary)', lineHeight: 1.45, fontFamily: 'var(--font-family)' }}>
                             {ex.notes}
                           </div>
                         </div>
@@ -508,7 +509,7 @@ export default function AnalysisAssignment({ subTab }) {
               {/* Custom exercise */}
               <Card>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-family)' }}>
                     Custom Exercise
                   </div>
                   <button
@@ -518,7 +519,7 @@ export default function AnalysisAssignment({ subTab }) {
                       background: addingCustom ? 'var(--danger-bg)' : 'var(--bg-card2)',
                       color:      addingCustom ? 'var(--danger)'    : 'var(--text-secondary)',
                       border: `1px solid ${addingCustom ? 'var(--danger-border)' : 'var(--border)'}`,
-                      borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      borderRadius: 7, fontSize: 'var(--text-caption)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family)',
                     }}
                   >
                     {addingCustom ? <><X size={12} /> Cancel</> : <><Plus size={12} /> Add Custom</>}
@@ -577,8 +578,8 @@ export default function AnalysisAssignment({ subTab }) {
                     </div>
                     <button onClick={addCustom} style={{
                       padding: '9px 0', background: 'var(--brand)', color: '#fff',
-                      border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'inherit',
+                      border: 'none', borderRadius: 8, fontSize: 'var(--text-secondary-size)', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-family)',
                     }}>
                       Add to Assignment
                     </button>
@@ -587,7 +588,7 @@ export default function AnalysisAssignment({ subTab }) {
 
                 {customExs.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: addingCustom ? 12 : 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>
+                    <div style={{ fontSize: 'var(--text-caption)', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2, fontFamily: 'var(--font-family)' }}>
                       Your Custom Exercises
                     </div>
                     {customExs.map((ex, i) => (
@@ -597,10 +598,10 @@ export default function AnalysisAssignment({ subTab }) {
                         border: '1px solid var(--success-border)', borderRadius: 10,
                       }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                          <div style={{ fontSize: 'var(--text-secondary-size)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2, fontFamily: 'var(--font-family)' }}>
                             {ex.name}
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: 'var(--text-caption)', color: 'var(--text-muted)', fontFamily: 'var(--font-family)' }}>
                             {ex.sets} sets × {ex.reps} reps
                           </div>
                         </div>
@@ -625,7 +626,7 @@ export default function AnalysisAssignment({ subTab }) {
                 </div>
 
                 {allExercises.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 12 }}>
+                  <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 'var(--text-caption)', fontFamily: 'var(--font-family)' }}>
                     <Dumbbell size={24} strokeWidth={1} style={{ marginBottom: 8, opacity: 0.3 }} />
                     <div>No exercises added yet</div>
                   </div>
@@ -639,7 +640,7 @@ export default function AnalysisAssignment({ subTab }) {
                       }}>
                         <Target size={12} color="var(--brand)" strokeWidth={2} style={{ flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 'var(--text-caption)', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-family)' }}>
                             {ex.name}
                           </div>
                           <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>

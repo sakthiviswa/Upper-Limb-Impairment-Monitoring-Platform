@@ -185,20 +185,23 @@ function SessionCard({ s, patient }) {
 }
 
 /* ── Main ─────────────────────────────────────────────────────────── */
-export default function SessionHistory({ patient }) {
+export default function SessionHistory({ patient, sessionCount, refreshKey = 0 }) {
   const { isDark } = useTheme()
   const [sessions, setSessions] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState('')
   const [view,     setView]     = useState('cards')
 
+  const effectiveSessionCount = typeof sessionCount === 'number' ? sessionCount : sessions.length
+
   useEffect(() => {
     if (!patient?.rehab_patient_id) { setLoading(false); return }
+    setLoading(true)
     rehabApi.get(`/api/sessions/patient/${patient.rehab_patient_id}`)
       .then(r => setSessions(r.data))
       .catch(() => setError('Could not load session history.'))
       .finally(() => setLoading(false))
-  }, [patient])
+  }, [patient?.rehab_patient_id, refreshKey])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 10, color: 'var(--text-muted)' }}>
@@ -282,7 +285,7 @@ export default function SessionHistory({ patient }) {
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
         {[
-          { label: 'Total Sessions', value: sessions.length   },
+          { label: 'Total Sessions', value: effectiveSessionCount },
           { label: 'Overall Avg',    value: `${overallAvg}°` },
           { label: 'Improving',      value: improving          },
           { label: 'Latest Change',  value: `${latestDelta > 0 ? '+' : ''}${latestDelta}°` },
@@ -304,7 +307,7 @@ export default function SessionHistory({ patient }) {
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Progress Overview</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-              {sessions.length} sessions · average angle per session
+              {effectiveSessionCount} sessions · average angle per session
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
