@@ -83,25 +83,7 @@ export default function LoginPage() {
         <Link to="/signup">Create one for free</Link>
       </p>
 
-      <div className="auth-divider">
-        <div className="auth-divider-line" />
-        <span className="auth-divider-label">Demo access</span>
-        <div className="auth-divider-line" />
-      </div>
-
-      <div className="auth-demo">
-        <div className="auth-demo-row">
-          <KeyRound size={22} color="#2563EB" />
-          <div>
-            <div className="auth-demo-title">Admin credentials</div>
-            <div className="auth-demo-creds">admin@healthcare.dev · Admin@1234</div>
-          </div>
-          <button type="button" className="auth-demo-fill"
-            onClick={() => setForm({ email: 'admin@healthcare.dev', password: 'Admin@1234' })}>
-            Fill
-          </button>
-        </div>
-      </div>
+      {/* Demo access removed for production security */}
     </AuthLayout>
   )
 }

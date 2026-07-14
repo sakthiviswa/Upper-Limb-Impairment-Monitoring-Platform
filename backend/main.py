@@ -112,7 +112,10 @@ def health():
 def seed_default_admin():
     db = SessionLocal()
     try:
-        if not db.query(User).filter_by(role="admin").first():
+        # Seed a default admin only when explicitly enabled via env var.
+        # This prevents accidental exposure of default credentials in production.
+        seed_allowed = os.environ.get("SEED_DEFAULT_ADMIN", "false").lower() in ("1", "true", "yes")
+        if seed_allowed and not db.query(User).filter_by(role="admin").first():
             admin = User(name="System Admin", email="admin@healthcare.dev", role="admin")
             admin.password = "Admin@1234"
             db.add(admin)

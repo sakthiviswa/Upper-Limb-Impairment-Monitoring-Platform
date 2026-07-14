@@ -113,7 +113,7 @@ export function PageHeader({ title, subtitle, icon: Icon, action, children }) {
 export function PageSection({ title, subtitle, icon: Icon, action, children }) {
   return (
     <div className="page-container">
-      <PageHeader title={title} subtitle={subtitle} icon={Icon} action={action} />
+      
       {children}
     </div>
   )

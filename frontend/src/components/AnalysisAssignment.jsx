@@ -361,7 +361,7 @@ export default function AnalysisAssignment({ subTab }) {
                   </div>
 
                   {/* Metrics */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 14 }}>
                     {[
                       { label: 'Avg Angle', value: `${s.avg_angle}°`,                   hi: true  },
                       { label: 'Max Angle', value: `${s.max_angle}°`,                   hi: false },
@@ -429,7 +429,7 @@ export default function AnalysisAssignment({ subTab }) {
         />
 
         {selectedPt && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, alignItems: 'start' }}>
 
             {/* ── Left: Library + Custom ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

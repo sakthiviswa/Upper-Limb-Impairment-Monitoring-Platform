@@ -24,3 +24,4 @@ Pillow==10.4.0
 # Face verification
 face-recognition==1.3.0
 dlib==19.24.2
+passlib==1.7.4

@@ -10,7 +10,6 @@ const ROLE_PATHS = { patient: '/patient/dashboard', doctor: '/doctor/dashboard',
 const ROLES = [
   { value: 'patient', label: 'Patient', Icon: User, desc: 'Track recovery & appointments' },
   { value: 'doctor',  label: 'Doctor',  Icon: Stethoscope, desc: 'Monitor patients & schedules' },
-  { value: 'admin',   label: 'Admin',   Icon: Shield, desc: 'Full system access' },
 ]
 
 export default function SignupPage() {

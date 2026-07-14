@@ -22,6 +22,15 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=409, detail="Email already registered")
 
+    # Disallow public creation of admin accounts. Admins must be created
+    # through a protected initialization script or by an existing Super Admin.
+    if (payload.role or '').lower() == 'admin':
+        raise HTTPException(
+            status_code=403,
+            detail=("Creating admin accounts via public registration is disabled. "
+                    "Use the secure admin creation process or contact the system administrator."),
+        )
+
     user = User(
         name=payload.name.strip(),
         email=email,

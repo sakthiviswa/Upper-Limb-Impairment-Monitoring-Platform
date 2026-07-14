@@ -413,15 +413,59 @@
   .app-navbar__profile-info {
     display: none;
   }
+
+  .app-navbar__menu-btn {
+    display: flex;
+  }
+
+  .app-navbar__right {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 768px) {
   .app-sidebar {
     transform: translateX(-100%);
+    width: min(320px, 80vw);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 210;
   }
 
   .app-sidebar--mobile-open {
     transform: translateX(0);
+  }
+
+  .app-navbar {
+    left: 0 !important;
+    right: 0;
+    width: 100%;
+  }
+
+  .app-navbar__inner {
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 10px;
+  }
+
+  .app-navbar__left {
+    gap: 8px;
+  }
+
+  .app-navbar__right {
+    gap: 8px;
+  }
+
+  .app-navbar__icon-btn,
+  .app-navbar__menu-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-navbar__divider {
+    display: none;
   }
 
   .app-main,
