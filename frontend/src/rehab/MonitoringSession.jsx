@@ -2,6 +2,8 @@
  * MonitoringSession.jsx
  * Theme-aware: reads from ThemeContext and uses CSS variables
  * Fully responsive - optimized for mobile, tablet, and desktop
+ * Mobile: Includes back camera toggle functionality
+ * Default: Uses back camera on mobile devices
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -150,6 +152,17 @@ function IconChevronDown({ size = 16, color = 'currentColor' }) {
   )
 }
 
+function IconFlipCamera({ size = 16, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 4v6h-6" />
+      <path d="M1 20v-6h6" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+      <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+    </svg>
+  )
+}
+
 /* ─────────────────────────── Grid Overlay ─────────────────────────── */
 function CameraGridOverlay({ visible }) {
   if (!visible) return null
@@ -247,6 +260,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
   const [cameraError, setCameraError] = useState('')
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileStats, setShowMobileStats] = useState(false)
+  const [facingMode, setFacingMode] = useState('environment') // Default to back camera on mobile
 
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -255,10 +269,17 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
   const angleBufferRef = useRef([])
   const streamRef = useRef(null)
 
-  // Detect mobile
+  // Detect mobile and set default camera
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768)
+      const mobile = window.innerWidth <= 768
+      setIsMobile(mobile)
+      // If mobile, default to back camera
+      if (mobile) {
+        setFacingMode('environment')
+      } else {
+        setFacingMode('user')
+      }
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
@@ -279,19 +300,50 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
   }
 
   /* ── Camera ── */
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (facing = facingMode) => {
     setCameraError('')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop())
+        streamRef.current = null
+      }
+
+      // Try to use back camera on mobile, fallback to front if not available
+      let constraints = {
+        video: { 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 }, 
+          facingMode: facing 
+        },
         audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
+      }
+
+      // For mobile, try environment first, then fallback to user
+      if (isMobile && facing === 'environment') {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(constraints)
+          streamRef.current = stream
+          setCameraReady(true)
+        } catch (err) {
+          // If back camera fails, try front camera
+          console.warn('Back camera not available, falling back to front camera')
+          constraints.video.facingMode = 'user'
+          const stream = await navigator.mediaDevices.getUserMedia(constraints)
+          streamRef.current = stream
+          setFacingMode('user')
+          setCameraReady(true)
+        }
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        streamRef.current = stream
+        setCameraReady(true)
+      }
+
+      if (videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current
         videoRef.current.onloadedmetadata = () => {
           videoRef.current.play()
-          setCameraReady(true)
         }
       }
       setPhase('camera_preview')
@@ -300,7 +352,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
         ? 'Camera access denied. Please allow camera permissions.'
         : 'Could not access camera. Check your device.')
     }
-  }, [])
+  }, [facingMode, isMobile])
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -309,6 +361,17 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
     }
     setCameraReady(false)
   }, [])
+
+  // Toggle camera between front and back
+  const toggleCamera = useCallback(async () => {
+    if (phase !== 'camera_preview' && phase !== 'monitoring') return
+    
+    const newFacing = facingMode === 'user' ? 'environment' : 'user'
+    setFacingMode(newFacing)
+    
+    // Restart camera with new facing mode
+    await startCamera(newFacing)
+  }, [facingMode, phase, startCamera])
 
   /* ── MediaPipe ── */
   const onPoseResult = useCallback((landmarks) => {
@@ -401,6 +464,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
     setPhase('idle'); setLive([]); setSummary(null); setAngle(null)
     setMaximized(false); setCountdown(null); setCameraError('')
     setShowMobileStats(false)
+    setFacingMode(isMobile ? 'environment' : 'user')
   }
 
   const cancelCamera = () => {
@@ -408,6 +472,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
     setPhase('idle')
     setCameraError('')
     setShowMobileStats(false)
+    setFacingMode(isMobile ? 'environment' : 'user')
   }
 
   /* ── Derived ── */
@@ -739,7 +804,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                     </div>
                   )}
                   <button
-                    onClick={startCamera}
+                    onClick={() => startCamera()}
                     disabled={!patient?.rehab_patient_id}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
@@ -762,7 +827,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                     }}
                   >
                     <IconCamera size={isMobile ? 16 : 18} color="currentColor" />
-                    Start Camera
+                    Start Camera {isMobile && '(Back Camera)'}
                   </button>
                   {!patient?.rehab_patient_id && (
                     <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', margin: '8px 0 0' }}>
@@ -920,6 +985,21 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
 
                 {/* Right side */}
                 <div className="ms-cam-toolbar" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6 }}>
+                  {/* Flip Camera Button - Mobile Only */}
+                  {isMobile && (
+                    <button
+                      onClick={toggleCamera}
+                      className="ms-cam-icon-btn"
+                      title="Switch Camera"
+                      style={{
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                      }}
+                    >
+                      <IconFlipCamera size={isMobile ? 14 : 16} color="#fff" />
+                    </button>
+                  )}
+
                   {/* Grid toggle */}
                   <button
                     title={showGrid ? 'Hide grid' : 'Show grid'}
@@ -978,7 +1058,7 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                     width: '100%', display: 'block', objectFit: 'cover',
                     minHeight: isMaximized ? 'calc(100vh - 52px - 60px)' : (isMobile ? 300 : 440),
                     maxHeight: isMaximized ? 'none' : (isMobile ? 400 : 520),
-                    transform: 'scaleX(-1)',
+                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)',
                   }}
                 />
                 <canvas
@@ -986,11 +1066,30 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                   style={{
                     position: 'absolute', top: 0, left: 0,
                     width: '100%', height: '100%',
-                    pointerEvents: 'none', transform: 'scaleX(-1)',
+                    pointerEvents: 'none', 
+                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)',
                   }}
                 />
 
                 <CameraGridOverlay visible={showGrid} />
+
+                {/* Camera Label - shows which camera is active */}
+                {isMobile && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 12,
+                    left: 12,
+                    zIndex: 10,
+                    background: 'rgba(0,0,0,0.7)',
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    fontSize: 10,
+                    color: 'rgba(255,255,255,0.8)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}>
+                    {facingMode === 'user' ? '📱 Front Camera' : '📷 Back Camera'}
+                  </div>
+                )}
 
                 {/* Scanline during recording */}
                 {phase === 'monitoring' && (
@@ -1361,6 +1460,28 @@ export default function MonitoringSession({ patient, onSessionComplete }) {
                     <IconPlay size={isMobile ? 16 : 14} color="#fff" /> 
                     {isMobile ? 'Start Recording' : 'Start Recording'}
                   </button>
+                  {/* Flip Camera button in bottom bar for mobile */}
+                  {isMobile && (
+                    <button
+                      onClick={toggleCamera}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: isMobile ? '12px 16px' : '11px 18px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 10,
+                        fontSize: isMobile ? 12 : 13,
+                        fontWeight: 600,
+                        color: 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        width: isMobile ? '100%' : 'auto',
+                      }}
+                    >
+                      <IconFlipCamera size={isMobile ? 16 : 14} color="currentColor" />
+                      {isMobile ? 'Switch Camera' : 'Flip'}
+                    </button>
+                  )}
                   <button
                     onClick={cancelCamera}
                     style={{
